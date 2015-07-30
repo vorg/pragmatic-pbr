@@ -1,0 +1,38 @@
+{
+  "name": "pragmatic-pbr",
+  "version": "0.0.0",
+  "description": "Implementing Physically Based Rendering from scratch in pex",
+  "main": "index.js",
+  "scripts": {
+  },
+  "keywords": [
+    "pbr",
+    "webgl",
+    "pex"
+  ],
+  "author": {
+    "name": "Marcin Ignac",
+    "email": "marcin.ignac@gmail.com",
+    "url": "http://marcinignac.com"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "pex-context": "variablestudio/pex-context",
+    "pex-cam": "variablestudio/pex-cam",
+    "pex-io": "variablestudio/pex-io",
+    "pex-math": "variablestudio/pex-math",
+    "pex-sys": "variablestudio/pex-sys",
+    "re-map": "^0.1.1"
+  },
+  "devDependencies": {
+    "beefy": "^2.1.5"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vorg/pragmatic-pbr.git"
+  },
+  "bugs": {
+    "url": "https://github.com/vorg/pragmatic-pbr/issues"
+  },
+  "homepage": "https://github.com/vorg/pragmatic-pbr"
+}
