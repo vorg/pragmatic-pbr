@@ -1,2 +1,5 @@
 node_modules
 .DS_Store
+.atom-build.json
+index.html
+main.web.js

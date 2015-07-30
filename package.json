@@ -3,8 +3,7 @@
   "version": "0.0.0",
   "description": "Implementing Physically Based Rendering from scratch in pex",
   "main": "index.js",
-  "scripts": {
-  },
+  "scripts": {},
   "keywords": [
     "pbr",
     "webgl",
@@ -17,14 +16,19 @@
   },
   "license": "MIT",
   "dependencies": {
-    "pex-context": "variablestudio/pex-context",
+    "glsl-diffuse-lambert": "^1.0.0",
+    "glsl-gamma": "^2.0.0",
+    "glsl-inverse": "^1.0.0",
+    "glsl-transpose": "^1.0.0",
     "pex-cam": "variablestudio/pex-cam",
+    "pex-context": "variablestudio/pex-context",
     "pex-io": "variablestudio/pex-io",
     "pex-math": "variablestudio/pex-math",
     "pex-sys": "variablestudio/pex-sys",
     "re-map": "^0.1.1"
   },
   "devDependencies": {
+    "browserify": "^11.0.1",
     "beefy": "^2.1.5"
   },
   "repository": {
