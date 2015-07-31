@@ -4,6 +4,9 @@ var Vec3         = require('pex-math/Vec3');
 var glslify      = require('glslify-promise');
 var createTorus  = require('primitive-torus');
 var createSphere = require('primitive-sphere');
+var isBrowser    = require('is-browser');
+
+var ASSETS_DIR = isBrowser ? '../assets' :  __dirname + '/../assets';
 
 Window.create({
     settings: {
@@ -13,7 +16,7 @@ Window.create({
     resources: {
         vert: { glsl: glslify(__dirname + '/Material.vert') },
         frag: { glsl: glslify(__dirname + '/Material.frag') },
-        texture: { image: __dirname + '/../assets/textures/Pink_tile_pxr128.jpg'} //TODO: correct path for the browser build
+        texture: { image: ASSETS_DIR + '/textures/Pink_tile_pxr128.jpg'} //TODO: correct path for the browser build
     },
     init: function() {
         var ctx = this.getContext();
