@@ -280,6 +280,10 @@ I made a spearate example with two lights
 
 ![](img/204.jpg)
 
+Try turning conversion to linear and gamma space to see the difference. Do you see that ugly brown on the left (uncorrected) side?
+
+![](img/204_comparison.jpg)
+
 ## 205-gamma-texture
 
 ![](img/205.jpg)
