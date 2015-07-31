@@ -193,14 +193,14 @@ float lambertDiffuse(vec3 lightDirection, vec3 surfaceNormal) {
 }
 ```
 
-## 203-gamma-manual
+## 203-gamma
 
 <iframe style="width:100%;" height="534" src="https://www.youtube.com/embed/LKnqECcg6Gw" frameborder="0" allowfullscreen></iframe>
 
 [![](img/203.jpg)](203-gamma-manual/)
 
 
-*203-gamma-manual/Material.frag*:
+*203-gamma/Material.frag*:
 ```glsl
 #pragma glslify: lambert   = require(glsl-diffuse-lambert)
 #pragma glslify: toLinear = require(glsl-gamma/in)
@@ -253,9 +253,15 @@ vec4 toGamma(vec4 v) {
 }
 ```
 
-## 204-gamma-texture-manual
+## 204-gamma-color
 
-## 205-gamma-srgb-ext
+![](img/204.jpg)
+
+## 205-gamma-texture
+
+![](img/205.jpg)
+
+## 206-gamma-srgb-ext
 
 
 ## TODO:
