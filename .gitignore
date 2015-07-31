@@ -3,3 +3,4 @@ node_modules
 .atom-build.json
 index.html
 main.web.js
+img-orig
