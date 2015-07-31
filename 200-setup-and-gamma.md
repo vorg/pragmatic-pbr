@@ -282,6 +282,11 @@ I made a spearate example with two lights
 
 ![](img/205.jpg)
 
+The brick texture comes from [Pixar One Twenty Eight](https://community.renderman.pixar.com/article/114/library-pixar-one-twenty-eight.html) - a collection of classic textures from Pixar. Only some of them are suitable for physically based rendering as many include lighting / shadows baked together with color.
+
+![](img/205_pixar_textures.jpg)
+
+
 ## 206-gamma-srgb-ext
 
 
