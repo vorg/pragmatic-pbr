@@ -195,7 +195,22 @@ float lambertDiffuse(vec3 lightDirection, vec3 surfaceNormal) {
 
 ## 203-gamma
 
-<iframe style="width:100%;" height="534" src="https://www.youtube.com/embed/LKnqECcg6Gw" frameborder="0" allowfullscreen></iframe>
+[Wikipedia: Gamma_correction](https://en.wikipedia.org/wiki/Gamma_correction)
+![](img/203_gamma_graph.png)
+
+PBR looks good because it's trying to avoid errors and approximations that accumulate across different rendering stages (color sampling, lighting / shading, blending etc). One of these assumptions is that
+
+[![](img/203_gamma_video.jpg)](https://www.youtube.com/watch?v=LKnqECcg6Gw)
+
+Other links worth checking out:
+
+- [The Importance of Being Linear (2008)](http://http.developer.nvidia.com/GPUGems3/gpugems3_ch24.html)
+- [Linear-Space Lighting (i.e. Gamma) (2010)](http://filmicgames.com/archives/299)
+- [Gamma and Linear Spaces](http://www.codinglabs.net/article_gamma_vs_linear.aspx)
+- [Gamma-Correct Lighting (2010)](http://www.gamasutra.com/blogs/DavidRosen/20100204/4322/GammaCorrect_Lighting.php)
+
+http://renderwonk.com/blog/index.php/archive/adventures-with-gamma-correct-rendering/ ??
+http://d.hatena.ne.jp/hanecci/20120108 ??
 
 [![](img/203.jpg)](203-gamma-manual/)
 
@@ -253,7 +268,13 @@ vec4 toGamma(vec4 v) {
 }
 ```
 
+This looks pretty much like an object i've seen somewhere before... as Vincent Scheib is pointing on his [Beautiful Pixels blog](http://beautifulpixels.blogspot.co.uk/2009/10/gamma-correct-lighting-on-moon.html)
+
+![](img/203_gamma_moon.png)
+
 ## 204-gamma-color
+
+I made a spearate example with two lights
 
 ![](img/204.jpg)
 
