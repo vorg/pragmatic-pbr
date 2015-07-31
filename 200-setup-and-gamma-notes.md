@@ -36,3 +36,18 @@ THREE.sRGB = 3001;
 THREE.RGBE = 3002;
 THREE.LogLuv = 3003;
 ```
+
+# sRGB
+
+SRGB in WebGL (core in WebGL 2.0) is enabled through
+[EXT_sRGB](https://www.khronos.org/registry/gles/extensions/EXT/EXT_sRGB.txt)
+
+Which is based on
+[ARB_framebuffer_sRGB](https://www.opengl.org/registry/specs/ARB/framebuffer_sRGB.txt)
+[EXT_texture_sRGB](https://www.opengl.org/registry/specs/EXT/texture_sRGB.txt)
+
+
+http://www.pauldebevec.com/Probes/
+http://gl.ict.usc.edu/Data/HighResProbes/
+
+[Gamma correct and HDR rendering in a 32 bits buffer](http://lousodrome.net/blog/light/tag/rgbm/)
