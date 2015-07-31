@@ -38,21 +38,23 @@ npm install
 To make sure everything works run the following command while in `pragmatic-pbr` directory.
 
 ```bash
-beefy 201-init/main.js --open --live -- -i plask
+beefy 201-init/main.js --open --live -- -i plask -g glslify-promise/transform
 ```
+
+beefy 206-gamma-srgb-ext/main.js --open --live -- -i plask -g glslify-promise/transform
 
 This should open your browser at [http://127.0.0.1:9966](http://127.0.0.1:9966) and display a rectangle that changes colors (click to see live version)
 
 [![](img/201.jpg)](201-init/)
 
-What is beefy? [Beefy](https://www.npmjs.com/package/beefy) is a local server that boundles our code and required node modules into one JS file using [browserify](http://browserify.org) that can be loaded by the browser. It also watches for changes (when run with `--live` flag) and will reload the page when you edit and save the JS file. Running a local server also solves a number of issues with AJAX requests and local file access policies in the browsers. In the `-- -i plask` part we have `browserify` flags where we ignore `plask` module. [Plask](http://plask.org) is a multimedia programming environment for OSX built on top of NodeJS and implementing WebGL v1.0+ spec. You can use it to run WebGL apps on OSX without the browser. I use it for development but we won't be using it in this tutorial.
+What is beefy? [Beefy](https://www.npmjs.com/package/beefy) is a local server that boundles our code and required node modules into one JS file using [browserify](http://browserify.org) that can be loaded by the browser. It also watches for changes (when run with `--live` flag) and will reload the page when you edit and save the JS file. Running a local server also solves a number of issues with AJAX requests and local file access policies in the browsers. In the `-- -i plask` part we have `browserify` flags where we ignore `plask` module and run our source code through `glslify` transform that will inline all the GLSL shaders. [Plask](http://plask.org) is a multimedia programming environment for OSX built on top of NodeJS and implementing WebGL v1.0+ spec. You can use it to run WebGL apps on OSX without the browser. I use it for development but we won't be using it in this tutorial.
 
 ### Deploying the code
 
 If you build on top of this tutorial and would like to have standalone (bundled) version that doesn't need beefy to run you can run the `browserify` yourself:
 
 ```bash
-browserify 201-init/main.js -i plask -o 201-init/main.web.js
+browserify 201-init/main.js -i plask -g glslify-promise/transform -o 201-init/main.web.js
 ```
 
 You will then need to add following `201-init/index.html` file:
@@ -288,6 +290,38 @@ The brick texture comes from [Pixar One Twenty Eight](https://community.renderma
 
 
 ## 206-gamma-srgb-ext
+
+[EXT_sRGB Extension](https://www.khronos.org/registry/webgl/extensions/EXT_sRGB/)
+
+```javascript
+gl.getExtension('EXT_sRGB')
+```
+
+```
+//sample color as usual, the RGB values will be converted to linear space for you
+vec4 baseColor = texture2D(uAlbedoTex, vTexCoord0 * vec2(3.0, 2.0));
+vec4 finalColor = vec4(baseColor.rgb * diffuse, 1.0);
+
+//we still need to bring it back to the gamma color space as we don't have sRGB aware render buffer here
+gl_FragColor = toGamma(finalColor);
+```
+
+According to [WebGL Report](http://webglreport.com/?v=1) supported in:
+
+- [x] Chrome 43+ on OSX
+- [x] Firefox 39+ on OSX
+- [x] Webkit Nighly r186719 on OSX
+- [ ] Safari 8.0.7 on OSX
+
+Additionaly
+
+- [ ] Plask v3 (due to images being uploaded to the GPU always as RGB)
+
+EXT_sRGB will be in core WebGL 2.0
+
+If you don't have EXT_sRGB enabled or supported you will get brighter image than expected:
+
+![](img/206_incorrect.jpg)
 
 
 ## TODO:
