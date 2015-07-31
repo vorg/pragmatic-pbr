@@ -1,4 +1,4 @@
-![](img/pragmatic-pbr-setup-and-gamma.jpg)
+![](img/200.jpg)
 ## Pragmatic PBR - Setup & Gamma
 
 This blog post is a part of series about implementing PBR in WebGL from scratch:
