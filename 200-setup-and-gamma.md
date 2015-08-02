@@ -171,20 +171,28 @@ Window.create({
     },
     //Init is called after creating WebGL context and successfuly loading all the resources
     init: function() {
-        //This returns pex-context/Context object with is the pex's WebGL context wrapper
+        //pex-context/Context object - the pex's WebGL context wrapper
         var ctx = this.getContext();
 
-        //Model transformation matrix - a JS Array with 16 numbers initialized to identity matrix
+        //Model transformation matrix
+        //An Array with 16 numbers initialized to an identity matrix
         this.model = Mat4.create();
 
         //Camera projection matrix
-        this.projection = Mat4.perspective(Mat4.create(), 45, this.getAspectRatio(), 0.001, 10.0);
+        this.projection = Mat4.perspective(
+            Mat4.create(),             //new matrix
+            45,                        //45' deg fov
+            this.getAspectRatio(),     //window aspect ratio width/height
+            0.001,                     //near clipping plane
+            10.0                       //far clipping plane
+        );
 
         //Camera view matrix
         this.view = Mat4.lookAt([], [0, 1, 5], [0, 0, 0], [0, 1, 0]);
 
-        //Context keeps a separate matrix stack for the projection, view and model matrix
-        //Additionaly it will compute normal matrix and inverse view matrix whenever view matrix changes
+        //The Context keeps a separate matrix stack for the projection,
+        //view and model matrix. Additionaly it will compute normal matrix
+        //and inverse view matrix whenever view matrix changes
         ctx.setProjectionMatrix(this.projection);
         ctx.setViewMatrix(this.view);
         ctx.setModelMatrix(this.model);
@@ -229,10 +237,10 @@ Window.create({
         //Activate our GLSL program
         ctx.bindProgram(this.program);
 
-        //Set light position uniform
+        //Set the light's position uniform
         //There is no need to set matrix uniforms like uProjectionMatrix as
-        //these are handled by the context
-        //List of all the uniforms is here [ProgramUniform.js](https://github.com/variablestudio/pex-context/blob/master/ProgramUniform.js)
+        //these are handled by the context. List of all handled uniforms is
+        //in pex-context/ProgramUniform.js
         this.program.setUniform('uLightPos', [10, 10, 10])
 
         //Activate the sphere mesh
