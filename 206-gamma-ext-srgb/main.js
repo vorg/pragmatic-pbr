@@ -23,7 +23,7 @@ Window.create({
 
         this.model = Mat4.create();
         this.projection = Mat4.perspective(Mat4.create(), 45, this.getAspectRatio(), 0.001, 10.0);
-        this.view = Mat4.lookAt([], [3, 2, 2], [0, 0, 0], [0, 1, 0]);
+        this.view = Mat4.lookAt([], [0, 1, 5], [0, 0, 0], [0, 1, 0]);
 
         ctx.setProjectionMatrix(this.projection);
         ctx.setViewMatrix(this.view);
@@ -32,10 +32,7 @@ Window.create({
         var res = this.getResources();
 
         this.program = ctx.createProgram(res.vert, res.frag);
-        ctx.bindProgram(this.program);
 
-
-        console.log(ctx.SRGB)
         this.texture = ctx.createTexture2D(res.texture, res.texture.width, res.texture.height, { repeat: true, format: ctx.SRGB, mipmap: true });
 
         var g = createSphere();
@@ -54,15 +51,10 @@ Window.create({
         ctx.clear(ctx.COLOR_BIT | ctx.DEPTH_BIT);
         ctx.setDepthTest(true);
 
-        ctx.setViewMatrix(Mat4.lookAt(this.view, [0, 1, 5], [0, 0, 0], [0, 1, 0]));
-
         ctx.bindProgram(this.program);
         this.program.setUniform('uLightPos', [10, 10, 10]);
         this.program.setUniform('uAlbedoTex', 0);
         ctx.bindTexture(this.texture, 0);
-
-        ctx.setViewMatrix(this.view);
-        ctx.setLineWidth(2);
 
         ctx.bindMesh(this.mesh);
         ctx.drawMesh();
