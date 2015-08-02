@@ -45,7 +45,7 @@ beefy 206-gamma-srgb-ext/main.js --open --live -- -i plask -g glslify-promise/tr
 
 This should open your browser at [http://127.0.0.1:9966](http://127.0.0.1:9966) and display a rectangle that changes colors (click to see live version)
 
-[![](img/201.jpg)](201-init/)
+[![](img/201.jpg)](http://marcinignac.com/blog/pragmatic-pbr-setup-and-gamma/201-init/)
 
 What is beefy? [Beefy](https://www.npmjs.com/package/beefy) is a local server that boundles our code and required node modules into one JS file using [browserify](http://browserify.org) that can be loaded by the browser. It also watches for changes (when run with `--live` flag) and will reload the page when you edit and save the JS file. Running a local server also solves a number of issues with AJAX requests and local file access policies in the browsers. In the `-- -i plask` part we have `browserify` flags where we ignore `plask` module and run our source code through `glslify` transform that will inline all the GLSL shaders. [Plask](http://plask.org) is a multimedia programming environment for OSX built on top of NodeJS and implementing WebGL v1.0+ spec. You can use it to run WebGL apps on OSX without the browser. I use it for development but we won't be using it in this tutorial.
 
@@ -112,6 +112,7 @@ Most of them will eventually end up on `npm` but I want to make sure the API is 
 
 ## 201-init
 
+Just a quick test to make sure our setup works. We will explain the code line by line the next section: 202-lambert-diffuse.
 
 ```javascript
 var Window = require('pex-sys/Window');
@@ -137,7 +138,7 @@ Window.create({
 
 ## 202-lambert-diffuse
 
-[![](img/202.jpg)](202-lambert-diffuse/)
+[![](img/202.jpg)](http://marcinignac.com/blog/pragmatic-pbr-setup-and-gamma/202-lambert-diffuse/)
 
 
 *202-lambert-diffuse/Material.vert*:
@@ -214,7 +215,7 @@ Other links worth checking out:
 http://renderwonk.com/blog/index.php/archive/adventures-with-gamma-correct-rendering/ ??
 http://d.hatena.ne.jp/hanecci/20120108 ??
 
-[![](img/203.jpg)](203-gamma-manual/)
+[![](img/203.jpg)](http://marcinignac.com/blog/pragmatic-pbr-setup-and-gamma/203-gamma/)
 
 
 *203-gamma/Material.frag*:
@@ -278,7 +279,7 @@ This looks pretty much like an object i've seen somewhere before... as Vincent S
 
 I made a spearate example with two lights
 
-![](img/204.jpg)
+[![](img/204.jpg)](http://marcinignac.com/blog/pragmatic-pbr-setup-and-gamma/204-gamma-color/)
 
 Try turning conversion to linear and gamma space to see the difference. Do you see that ugly brown on the left (uncorrected) side?
 
@@ -286,14 +287,14 @@ Try turning conversion to linear and gamma space to see the difference. Do you s
 
 ## 205-gamma-texture
 
-![](img/205.jpg)
+[![](img/205.jpg)](http://marcinignac.com/blog/pragmatic-pbr-setup-and-gamma/205-gamma-texture/)
 
 The brick texture comes from [Pixar One Twenty Eight](https://community.renderman.pixar.com/article/114/library-pixar-one-twenty-eight.html) - a collection of classic textures from Pixar. Only some of them are suitable for physically based rendering as many include lighting / shadows baked together with color.
 
 ![](img/205_pixar_textures.jpg)
 
 
-## 206-gamma-srgb-ext
+## 206-gamma-ext-srgb
 
 [EXT_sRGB Extension](https://www.khronos.org/registry/webgl/extensions/EXT_sRGB/)
 
@@ -320,12 +321,11 @@ According to [WebGL Report](http://webglreport.com/?v=1) supported in:
 Additionaly
 
 - [ ] Plask v3 (due to images being uploaded to the GPU always as RGB)
+- [x] EXT_sRGB will be in core WebGL 2.0
 
-EXT_sRGB will be in core WebGL 2.0
+If you don't have EXT_sRGB enabled or supported you will get brighter image than expected due to
 
-If you don't have EXT_sRGB enabled or supported you will get brighter image than expected:
-
-![](img/206_incorrect.jpg)
+[![](img/206_incorrect.jpg)](http://marcinignac.com/blog/pragmatic-pbr-setup-and-gamma/206-gamma-ext-srgb/)
 
 
 ## TODO:
