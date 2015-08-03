@@ -215,7 +215,13 @@ The `max(0.0, dot(L, N)` is to prevent going below zero for angles > 90'deg that
 
 ### Transformations
 
+In order to calculate dot product for each pixel of our sphere we first need to transform it's vertices in a Vertex Shader. This is a good place to talk about transformation spaces as different parts of shading are calculated in different spaces depending where is your data (e.g. you might calculate specular reflections from light in eye space as they are depending on viewer's position but environmental reflections in the world space where your skybox/environment is located).
+
+We start in the model space with our sphere vertices. Model space is relative to the model itself i.e. point [0,0,0] will be usually in the center of the mesh (for a sphere) or at the bottom (for a standing person). By encoding mesh position, rotation and scale into a model matrix we can transform the vertices into world space - it's relative position to the center of the scene. In this example the sphere is centered so there is no transformations applied. Next we use camera position and direction to build view matrix that moves the vertices into the view space - position relative to the camera point of view. Projection matrix moves the vertices into projection space. This step will cause shapes far away from the camera appear smaller if we use perspective projection. Finally WebGL will then take the projected vertices no in so called normalized device coordinates, clip them (remove stuff outside of the screen) and calculate their final position relatively to the window based on the current viewport.
+
 ![](img/202_transformation_spaces.jpg)
+
+To clarify and sum up:
 
 ```javascript
 Model Space        //vertex position
@@ -226,7 +232,7 @@ World Space        //position in the scene
      ↓
 View Matrix        //camera position and direction
      ↓
-View space         //eye space, camera space
+View Space         //eye space, camera space
      ↓
 Projection Matrix  //perspective projection, orthographic projection
      ↓
@@ -237,17 +243,86 @@ Projection Space   //projection/ clipping space, normalized device coordinates
 Screen Space       //window position
 ```
 
+Here is the vertex shader we will use to do the job:
 
+*202-lambert-diffuse/Material.vert*:
 
+```glsl
+//vertex position in the model space
+attribute vec4 aPosition;
+//vertex normal in the model space
+attribute vec3 aNormal;
+
+//current transformation matrices coming from Context
+uniform mat4 uProjectionMatrix;
+uniform mat4 uViewMatrix;
+uniform mat4 uModelMatrix;
+uniform mat3 uNormalMatrix;
+
+//user supplied light position
+uniform vec3 uLightPos;
+
+//vertex position in the eye coordinates (view space)
+varying vec3 ecPosition;
+//light position in the eye coordinates (view space)
+varying vec3 ecLightPos;
+//normal in the eye coordinates (view space)
+varying vec3 ecNormal;
+
+void main() {
+    //transform vertex into the eye space
+    vec4 pos = uViewMatrix * uModelMatrix * aPosition;
+    ecPosition = pos.xyz;
+    ecNormal = uNormalMatrix * aNormal;
+    
+    ecLightPos = vec3(uViewMatrix * uModelMatrix * vec4(uLightPos, 1.0));
+    
+    //project the vertex, the rest is handled by WebGL
+    gl_Position = uProjectionMatrix * pos;   
+}
+```
+
+Notes:
+
+- So why `ec` and `ecPosition` eye coordinates but `uViewMatrix`? Conventions.. `vPosition` looks like `varying` - too generic, `vs` looks like `vertex shader` not much better.
+- Why we use `uViewMatrix * uModelMatrix` to get `ecPosition` but `uNormalMatrix` to get `ecNormal`? `uNormalMatrix` is so called normal matrix. It's an inverse transpose of the view matrix. Yay!, What? Hmm, normal vectors are not really points in space like vertex positions but directions therefore we can't transform them in the same way because while rotation make sense a translation does not (vector pointing upwards moved 3 meters to the right is still pointing upwards..). More details here [OpenGL Programming Guide: Transforming Normals](http://www.glprogramming.com/red/appendixf.html) - where they explain the math. Don't worry, in `pex` the Context computes normal matrix for you whenever the view matrix changes and updates the `uNormalMatrix` uniform when necessary.
+- Why eye coordinates at all? Again conventions, many lighting models depend on the viewer's (camera) position and these are easier (faster) to calculate in the eye space where camera position is `[0,0,0]`.
 
 You can read more about the math behind these matrices at [Coding Labs: World, View and Projection Transformation Matrices](http://www.codinglabs.net/article_world_view_projection_matrix.aspx).
 
+### Shading
 
-Fire the following command to open this example in the browser:
+Now that we are in the right transformation space and have all the data we can calculate the lambert diffuse for each pixel.
 
+*202-lambert-diffuse/Material.frag*:
+
+```glsl
+#pragma glslify: lambert   = require(glsl-diffuse-lambert)
+
+varying vec3 ecNormal;
+varying vec3 ecLightPos;
+varying vec3 ecPosition;
+
+void main() {
+    vec3 N = normalize(ecNormal);
+    vec3 L = normalize(ecLightPos - ecPosition);
+    vec3 V = normalize(-ecPosition);
+    
+    //diffuse intensity
+    float Id = lambert(L, N);
+
+	 //surface and light color, full white
+    vec4 baseColor = vec4(1.0);
+    vec4 lightColor = vec4(1.0);
+
+    vec4 finalColor = vec4(baseColor.rgb * lightColor.rgb * Id, 1.0);
+    gl_FragColor = finalColor;
+}
 ```
-beefy 202-lambert-diffuse/main.js --open --live -- -i plask -g glslify-promise/transform
-```
+
+### Putting it all together
+
+The last thing we need to do is to actually create the geometry, load the shaders, and render everything on the screen.
 
 *202-lambert-diffuse/main.js*:
 
@@ -365,56 +440,13 @@ Window.create({
 })
 ```
 
-*202-lambert-diffuse/Material.vert*:
+### Running the code
 
-```glsl
-attribute vec4 aPosition;
-attribute vec3 aNormal;
+Fire the following command to open this example in the browser:
 
-uniform mat4 uProjectionMatrix;
-uniform mat4 uViewMatrix;
-uniform mat4 uModelMatrix;
-uniform mat3 uNormalMatrix;
-
-uniform vec3 uLightPos;
-
-varying vec3 ecNormal;
-varying vec3 ecLight;
-varying vec3 ecPosition;
-
-void main() {
-    vec4 pos = uViewMatrix * uModelMatrix * aPosition;
-    ecPosition = pos.xyz;
-    gl_Position = uProjectionMatrix * pos;
-    ecLight = vec3(uViewMatrix * uModelMatrix * vec4(uLightPos, 1.0));
-    ecNormal = uNormalMatrix * aNormal;
-}
 ```
-
-*202-lambert-diffuse/Material.frag*:
-
-```glsl
-#pragma glslify: lambert   = require(glsl-diffuse-lambert)
-
-varying vec3 ecNormal;
-varying vec3 ecLight;
-varying vec3 ecPosition;
-
-void main() {
-    vec3 N = normalize(ecNormal);
-    vec3 L = normalize(ecLight - ecPosition);
-    vec3 V = normalize(-ecPosition);
-    float diffuse = lambert(L, N);
-
-    //albedo
-    vec4 baseColor = vec4(1.0);
-
-    vec4 finalColor = vec4(baseColor.rgb * diffuse, 1.0);
-    gl_FragColor = finalColor;
-}
+beefy 202-lambert-diffuse/main.js --open --live -- -i plask -g glslify-promise/transform
 ```
-
-
 
 ## 203-gamma
 

@@ -43,7 +43,11 @@ Window.create({
         );
 
         //Camera view matrix
-        this.view = Mat4.lookAt([], [0, 1, 5], [0, 0, 0], [0, 1, 0]);
+        this.view = Mat4.create();
+        //[0,1,5] - eye position
+        //[0,0,0] - target position
+        //[0,1,0] - camera up vector
+        Mat4.lookAt(this.view, [0, 1, 5], [0, 0, 0], [0, 1, 0]);
 
         //The Context keeps a separate matrix stack for the projection,
         //view and model matrix. Additionaly it will compute normal matrix
