@@ -41,8 +41,6 @@ To make sure everything works run the following command while in `pragmatic-pbr`
 beefy 201-init/main.js --open --live -- -i plask -g glslify-promise/transform
 ```
 
-beefy 206-gamma-srgb-ext/main.js --open --live -- -i plask -g glslify-promise/transform
-
 This should open your browser at [http://127.0.0.1:9966](http://127.0.0.1:9966) and display a rectangle that changes colors (click to see live version)
 
 [![](img/201.jpg)](http://marcinignac.com/blog/pragmatic-pbr-setup-and-gamma/201-init/)
@@ -112,18 +110,43 @@ Most of them will eventually end up on `npm` but I want to make sure the API is 
 
 ## 201-init
 
-Just a quick test to make sure our setup works. We will explain the code line by line the next section: 202-lambert-diffuse.
+This is just a quick test to make sure our setup works. The basic structure of a pex program is as follows (we will go into more details in the next section):
+
+```javascript
+//imports
+var Window = require('pex-sys/Window');
+
+//Open window
+Window.create({
+    settings: {
+        //initial window properties
+    },
+    resources: {
+        //optional resource files to load before init
+    },
+    init: function() {
+        //this code is executed after WebGL context creation
+    },
+    draw: function() {
+        //this code is executed every frame
+    }
+})
+```
+
+So to make a window with background color changing every frame we would write:
 
 ```javascript
 var Window = require('pex-sys/Window');
+
+var frame = 0;
+
 Window.create({
     settings: {
         width: 1024,
         height: 576
     },
-    init: function() {
-        console.log('init');
-    },
+    //skipping resources
+    //skipping init
     draw: function() {
         var ctx = this.getContext();
         frame++;
@@ -140,7 +163,93 @@ Window.create({
 
 [![](img/202.jpg)](http://marcinignac.com/blog/pragmatic-pbr-setup-and-gamma/202-lambert-diffuse/)
 
-Let start with a simple scene containing one sphere and a single point light. We will make a number of assumptions: the surface of the sphere is white,  the light color is white and there is not light attenuation (light loosing intensity with distance).
+Let's start with a simple scene containing one sphere and a single point light. We will make a number of assumptions: the surface of the sphere is white, the light color is white and there is no light attenuation (light loosing intensity with distance) and the light's position is static (no animation) and located at `[10,10,10]` (top right, in front of the sphere).
+
+### Diffuse Lighting
+
+In order to calculate the appearance of a surface under these lighting conditions we need a lighting (shading) model. One of the simplest and most commonly used shading models is [Lambertian reflectance](https://en.wikipedia.org/wiki/Lambertian_reflectance) also known as *Lambert diffuse* or just *Lambert*. It models a [diffuse reflection](https://en.wikipedia.org/wiki/Diffuse_reflection) (light reflecting into multiple directions -> blurry reflection) for matte / rough objects. It doesn't handle [specular reflection](https://en.wikipedia.org/wiki/Specular_reflection) (light reflecting into single direction causing -> sharp, mirror / highlight like) but we don't need that yet. Lambert diffuse obeys [Lambert's cosine law](https://en.wikipedia.org/wiki/Lambert%27s_cosine_law) stating that light intensity observed on the surface is proportional to the cosine of the angle between direction towards the light and [the surface normal](https://en.wikipedia.org/wiki/Normal_(geometry)). 
+
+If both direction towards the light and normal point in the same direction the angle will be `0` and `cos(0) = 1` therefore intensity will be the strongest. At `45' deg` we have are losing 30% of the intensity `cos(PI/4) = 0.707`, dropping to zero at `90' deg` as `cos(PI/2) = 0`.
+
+![](img/202_lambert_diffuse.jpg)
+
+We can measure the angle between two vectors using a [dot products](https://en.wikipedia.org/wiki/Dot_product) `N·L`
+
+```javascript
+//Id - diffuse intensity
+Id = N·L
+```
+
+One way to calculate a dot product is to multiply lengths of the two vectors and cosine of the angle between them.
+
+```javascript
+//|N| - length of the surface normal
+//|L| - length of the direction towards the light
+Id = N·L = |N|*|L|*cos(a)
+```
+
+If both the vectors are normalized (their length is 1) then our formula simplifies even more.
+
+```javascript
+//assuming |N| = 1 and |L| = 1
+Id = N·L = |N|*|L|*cos(a) = cos(a)
+```
+
+In practice we will always assume that input vectors `N` and `L` are normalized and use `dot` function that is natively supported in GLSL shader language.
+
+```glsl
+I = dot(N, L)
+```
+
+Here is the implementation from [glsl-diffuse-lambert](https://www.npmjs.com/package/glsl-diffuse-lambert) module that we will later use.
+
+*glsl-diffuse-lambert/index.js:*
+
+```glsl
+float lambertDiffuse(vec3 lightDirection, vec3 surfaceNormal) {
+  return max(0.0, dot(lightDirection, surfaceNormal));
+}
+```
+
+The `max(0.0, dot(L, N)` is to prevent going below zero for angles > 90'deg that would cause invalid colors on the output (we can't go blacker than black `[0,0,0]`).
+
+### Transformations
+
+![](img/202_transformation_spaces.jpg)
+
+```javascript
+Model Space        //vertex position
+     ↓
+Model Matrix       //model position, rotation, scale
+     ↓
+World Space        //position in the scene
+     ↓
+View Matrix        //camera position and direction
+     ↓
+View space         //eye space, camera space
+     ↓
+Projection Matrix  //perspective projection, orthographic projection
+     ↓
+Projection Space   //projection/ clipping space, normalized device coordinates
+     ↓
+  Viewport         //part of the window that we render to
+     ↓  
+Screen Space       //window position
+```
+
+
+
+
+You can read more about the math behind these matrices at [Coding Labs: World, View and Projection Transformation Matrices](http://www.codinglabs.net/article_world_view_projection_matrix.aspx).
+
+
+Fire the following command to open this example in the browser:
+
+```
+beefy 202-lambert-diffuse/main.js --open --live -- -i plask -g glslify-promise/transform
+```
+
+*202-lambert-diffuse/main.js*:
 
 ```javascript
 //Import all the dependencies
@@ -188,7 +297,11 @@ Window.create({
         );
 
         //Camera view matrix
-        this.view = Mat4.lookAt([], [0, 1, 5], [0, 0, 0], [0, 1, 0]);
+        this.view = Mat4.create();
+        //[0,1,5] - eye position
+        //[0,0,0] - target position
+        //[0,1,0] - camera up vector
+        Mat4.lookAt(this.view, [0, 1, 5], [0, 0, 0], [0, 1, 0]);
 
         //The Context keeps a separate matrix stack for the projection,
         //view and model matrix. Additionaly it will compute normal matrix
@@ -252,8 +365,8 @@ Window.create({
 })
 ```
 
-
 *202-lambert-diffuse/Material.vert*:
+
 ```glsl
 attribute vec4 aPosition;
 attribute vec3 aNormal;
@@ -301,28 +414,24 @@ void main() {
 }
 ```
 
-*glsl-diffuse-lambert*:
-```glsl
-float lambertDiffuse(vec3 lightDirection, vec3 surfaceNormal) {
-  return max(0.0, dot(lightDirection, surfaceNormal));
-}
-```
+
 
 ## 203-gamma
 
-[Wikipedia: Gamma_correction](https://en.wikipedia.org/wiki/Gamma_correction)
+PBR looks good because it's trying to avoid errors and approximations that accumulate across different rendering stages (color sampling, lighting / shading, blending etc). One of these assumptions is that that half the value 0.5 equals half the brightness. Unfortunately this is now how things work. Most screen we are using nowadays follow so called gamma curve that maps the input value to the brightness of a pixel.
+
+Source: [Wikipedia: Gamma_correction](https://en.wikipedia.org/wiki/Gamma_correction)
 ![](img/203_gamma_graph.png)
 
-PBR looks good because it's trying to avoid errors and approximations that accumulate across different rendering stages (color sampling, lighting / shading, blending etc). One of these assumptions is that
 
 [![](img/203_gamma_video.jpg)](https://www.youtube.com/watch?v=LKnqECcg6Gw)
 
 Other links worth checking out:
 
-- [The Importance of Being Linear (2008)](http://http.developer.nvidia.com/GPUGems3/gpugems3_ch24.html)
-- [Linear-Space Lighting (i.e. Gamma) (2010)](http://filmicgames.com/archives/299)
-- [Gamma and Linear Spaces](http://www.codinglabs.net/article_gamma_vs_linear.aspx)
-- [Gamma-Correct Lighting (2010)](http://www.gamasutra.com/blogs/DavidRosen/20100204/4322/GammaCorrect_Lighting.php)
+- [GPU Gems 3: The Importance of Being Linear (2008)](http://http.developer.nvidia.com/GPUGems3/gpugems3_ch24.html)
+- [Filmic Games: Linear-Space Lighting (i.e. Gamma) (2010)](http://filmicgames.com/archives/299)
+- [Coding Labs: Gamma and Linear Spaces](http://www.codinglabs.net/article_gamma_vs_linear.aspx)
+- [Gamasutra: Gamma-Correct Lighting (2010)](http://www.gamasutra.com/blogs/DavidRosen/20100204/4322/GammaCorrect_Lighting.php)
 
 http://renderwonk.com/blog/index.php/archive/adventures-with-gamma-correct-rendering/ ??
 http://d.hatena.ne.jp/hanecci/20120108 ??
@@ -331,6 +440,7 @@ http://d.hatena.ne.jp/hanecci/20120108 ??
 
 
 *203-gamma/Material.frag*:
+
 ```glsl
 #pragma glslify: lambert   = require(glsl-diffuse-lambert)
 #pragma glslify: toLinear = require(glsl-gamma/in)
@@ -358,6 +468,7 @@ void main() {
 ```
 
 *glsl-gamma/in*:
+
 ```glsl
 const float gamma = 2.2;
 
@@ -371,6 +482,7 @@ vec4 toLinear(vec4 v) {
 ```
 
 *glsl-gamma/out*:
+
 ```glsl
 const float gamma = 2.2;
 
@@ -383,7 +495,7 @@ vec4 toGamma(vec4 v) {
 }
 ```
 
-This looks pretty much like an object i've seen somewhere before... as Vincent Scheib is pointing on his [Beautiful Pixels blog](http://beautifulpixels.blogspot.co.uk/2009/10/gamma-correct-lighting-on-moon.html)
+This looks pretty much like an object i've seen somewhere before... as Vincent Scheib is pointing on his [Beautiful Pixels blog](http://beautifulpixels.blogspot.co.uk/2009/10/gamma-correct-lighting-on-moon.html).
 
 ![](img/203_gamma_moon.png)
 

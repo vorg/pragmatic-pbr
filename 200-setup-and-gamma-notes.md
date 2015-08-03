@@ -47,6 +47,8 @@ Which is based on
 [EXT_texture_sRGB](https://www.opengl.org/registry/specs/EXT/texture_sRGB.txt)
 
 
+# Other
+
 http://www.pauldebevec.com/Probes/
 http://gl.ict.usc.edu/Data/HighResProbes/
 

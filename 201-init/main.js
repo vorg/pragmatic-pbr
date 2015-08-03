@@ -7,9 +7,6 @@ Window.create({
         width: 1024,
         height: 576
     },
-    init: function() {
-        console.log('init');
-    },
     draw: function() {
         var ctx = this.getContext();
         frame++;
