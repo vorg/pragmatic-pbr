@@ -2,6 +2,7 @@
 precision highp float;
 #endif
 
+//require the lambert diffuse formula from a module via glslify
 #pragma glslify: lambert   = require(glsl-diffuse-lambert)
 
 varying vec3 ecNormal;
@@ -9,9 +10,12 @@ varying vec3 ecLightPos;
 varying vec3 ecPosition;
 
 void main() {
+    //normalize the normal, we do it here instead of vertex
+	 //shader for smoother gradients
     vec3 N = normalize(ecNormal);
+
+    //calculate direction towards the light
     vec3 L = normalize(ecLightPos - ecPosition);
-    vec3 V = normalize(-ecPosition);
 
     //diffuse intensity
     float Id = lambert(L, N);
