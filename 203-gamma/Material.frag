@@ -7,21 +7,22 @@ precision highp float;
 #pragma glslify: toGamma  = require(glsl-gamma/out)
 
 varying vec3 ecNormal;
-varying vec3 ecLight;
+varying vec3 ecLightPos;
 varying vec3 ecPosition;
 
 float PI = 3.14159265;
 
 void main() {
     vec3 N = normalize(ecNormal);
-    vec3 L = normalize(ecLight - ecPosition);
-    vec3 V = normalize(-ecPosition);
-    //float diffuse = lambert(L, N) / PI;
-    float diffuse = lambert(L, N);
+    vec3 L = normalize(ecLightPos - ecPosition);
 
-    //albedo
-    vec4 baseColor = toLinear(vec4(1.0));
+    //diffuse intensity
+    float Id = lambert(L, N);
 
-    vec4 finalColor = vec4(baseColor.rgb * diffuse, 1.0);
+    //surface and light color, full white
+    vec4 baseColor = vec4(1.0);
+    vec4 lightColor = vec4(1.0);
+
+    vec4 finalColor = vec4(baseColor.rgb * lightColor.rgb * Id, 1.0);
     gl_FragColor = toGamma(finalColor);
 }

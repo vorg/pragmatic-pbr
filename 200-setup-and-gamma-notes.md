@@ -53,3 +53,7 @@ http://www.pauldebevec.com/Probes/
 http://gl.ict.usc.edu/Data/HighResProbes/
 
 [Gamma correct and HDR rendering in a 32 bits buffer](http://lousodrome.net/blog/light/tag/rgbm/)
+
+
+http://renderwonk.com/blog/index.php/archive/adventures-with-gamma-correct-rendering/ ??
+http://d.hatena.ne.jp/hanecci/20120108 ??

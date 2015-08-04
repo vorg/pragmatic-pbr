@@ -454,23 +454,35 @@ beefy 202-lambert-diffuse/main.js --open --live -- -i plask -g glslify-promise/t
 
 ## 203-gamma
 
-PBR looks good because it's trying to avoid errors and approximations that accumulate across different rendering stages (color sampling, lighting / shading, blending etc). One of these assumptions is that that half the value 0.5 equals half the brightness. Unfortunately this is now how things work. Most screen we are using nowadays follow so called gamma curve that maps the input value to the brightness of a pixel.
+PBR looks good because it's trying to avoid errors and approximations that accumulate across different rendering stages (color sampling, lighting / shading, blending etc). One of these assumptions is that that half the value 0.5 equals half the brightness. Unfortunately this is not how things work. Most screen we are using nowadays follow so called gamma curve that maps the input value to the brightness of a pixel in a non linear way. 
 
 Source: [Wikipedia: Gamma_correction](https://en.wikipedia.org/wiki/Gamma_correction)
 ![](img/203_gamma_graph.png)
 
+Because of historical reasons (cathode ray tube - CRT screens) whatever our application produces will be converted (made darker) by rising it to the power of 2.2. That value `2.2` is called gamma. This fact was often neglected to the medicare results and plastic look of older games.
 
-[![](img/203_gamma_video.jpg)](https://www.youtube.com/watch?v=LKnqECcg6Gw)
+To counter that effect most commonly used graphics formats like JPEG encode their colors brighter that they are in reality (captured by the camera sensor). This also helps to keep more details (by using more bits) in the darker areas where human eyes are more sensitive.
 
-Other links worth checking out:
+We will call these brighter color values **gamma space** and and non modified values **linear space**. You ALWAYS want to do your lighting calculations in the latter. Therefore whenever we get some color from a texture or another sRGB encoded value (sRGB follows a similar curve) we need to convert it into linear space by rising to the power of 2.2 (0.45) and then after we are done we need to move it back to the gamma space by rising it to the power of 1.2/2.2. Monitor will then apply it's 2.2 curve and it all will look beautiful. [Filmic Games: Linear-Space Lighting (i.e. Gamma) (2010)](http://filmicgames.com/archives/299) has great illustrations for that.
+
+
+```javascript
+gamma space     //input colors
+     ↓
+ pow(2.2)       //Cl = pow(Cg, 2.2)
+    ↓
+linear space
+    ↓
+pow(1.0/2.2)    //Cg = pow(Cc, 1.0/2.2)
+    ↓ 
+gamma space     //colors for the screen
+```
+
+If you still feel confused (I would) please read more on the topic. Remember: Gamma / linear lighting is the *"Number one trick to improve your rendering quality in no time!"*.
 
 - [GPU Gems 3: The Importance of Being Linear (2008)](http://http.developer.nvidia.com/GPUGems3/gpugems3_ch24.html)
-- [Filmic Games: Linear-Space Lighting (i.e. Gamma) (2010)](http://filmicgames.com/archives/299)
 - [Coding Labs: Gamma and Linear Spaces](http://www.codinglabs.net/article_gamma_vs_linear.aspx)
 - [Gamasutra: Gamma-Correct Lighting (2010)](http://www.gamasutra.com/blogs/DavidRosen/20100204/4322/GammaCorrect_Lighting.php)
-
-http://renderwonk.com/blog/index.php/archive/adventures-with-gamma-correct-rendering/ ??
-http://d.hatena.ne.jp/hanecci/20120108 ??
 
 [![](img/203.jpg)](http://marcinignac.com/blog/pragmatic-pbr-setup-and-gamma/203-gamma/)
 
@@ -478,7 +490,7 @@ http://d.hatena.ne.jp/hanecci/20120108 ??
 *203-gamma/Material.frag*:
 
 ```glsl
-#pragma glslify: lambert   = require(glsl-diffuse-lambert)
+#pragma glslify: lambert  = require(glsl-diffuse-lambert)
 #pragma glslify: toLinear = require(glsl-gamma/in)
 #pragma glslify: toGamma  = require(glsl-gamma/out)
 
@@ -537,7 +549,11 @@ This looks pretty much like an object i've seen somewhere before... as Vincent S
 
 ## 204-gamma-color
 
-I made a spearate example with two lights
+I know, I know. You are still not convinced. This video will change everything though:
+
+[![](img/203_gamma_video.jpg)](https://www.youtube.com/watch?v=LKnqECcg6Gw)
+
+I made a separate example with two lights for you to play with and see the results yourself:
 
 [![](img/204.jpg)](http://marcinignac.com/blog/pragmatic-pbr-setup-and-gamma/204-gamma-color/)
 
@@ -588,6 +604,6 @@ If you don't have EXT_sRGB enabled or supported you will get brighter image than
 [![](img/206_incorrect.jpg)](http://marcinignac.com/blog/pragmatic-pbr-setup-and-gamma/206-gamma-ext-srgb/)
 
 
-## TODO:
+## Comments, feedback and contributing
 
-- [ ] switch from point light to directional light
+Please leave any comments below, on twitter [@marcinignac](http://twitter.com/marcinignac) or via positing issues or pull request on Github for this page [pragmatic-pbr/200-setup-and-gamma.md](https://github.com/vorg/pragmatic-pbr/blob/master/200-setup-and-gamma.md).
