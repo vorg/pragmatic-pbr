@@ -609,6 +609,7 @@ But first we need to create a texture in `pex`:
 //built-in variable pointing to the folder where the js script lives,
 //We need that to make it work in Plask.
 var ASSETS_DIR = isBrowser ? '../assets' :  __dirname + '/../assets';
+```
 
 Then we declare the image resource to be loaded before init. `texture` is just a name we will use to refer to it later.
 
