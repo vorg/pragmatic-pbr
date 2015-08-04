@@ -264,10 +264,10 @@ uniform vec3 uLightPos;
 
 //vertex position in the eye coordinates (view space)
 varying vec3 ecPosition;
-//light position in the eye coordinates (view space)
-varying vec3 ecLightPos;
 //normal in the eye coordinates (view space)
 varying vec3 ecNormal;
+//light position in the eye coordinates (view space)
+varying vec3 ecLightPos;
 
 void main() {
     //transform vertex into the eye space
@@ -300,9 +300,10 @@ Now that we are in the right transformation space and have all the data we can c
 //require the lambert diffuse formula from a module via glslify
 #pragma glslify: lambert   = require(glsl-diffuse-lambert)
 
+//vertex position, normal and light position in the eye/view space
+varying vec3 ecPosition;
 varying vec3 ecNormal;
 varying vec3 ecLightPos;
-varying vec3 ecPosition;
 
 void main() {
 	 //normalize the normal, we do it here instead of vertex
@@ -461,24 +462,27 @@ Source: [Wikipedia: Gamma_correction](https://en.wikipedia.org/wiki/Gamma_correc
 
 Because of historical reasons (cathode ray tube - CRT screens) whatever our application produces will be converted (made darker) by rising it to the power of 2.2. That value `2.2` is called gamma. This fact was often neglected to the medicare results and plastic look of older games.
 
-To counter that effect most commonly used graphics formats like JPEG encode their colors brighter that they are in reality (captured by the camera sensor). This also helps to keep more details (by using more bits) in the darker areas where human eyes are more sensitive.
+At the same time most commonly used graphics formats like JPEG encode their colors using sRGB curve that negates this effect. I.e. They save values brighter that they are in reality (captured by the camera sensor). This also helps to keep more details (by using more bits) in the darker areas where human eyes are more sensitive. That sRGB curve negating the CRT gamma curve was the reason it all kind of worked so far, *just* the math was wrong so it was harder to achieve realistic (expected) results.
 
-We will call these brighter color values **gamma space** and and non modified values **linear space**. You ALWAYS want to do your lighting calculations in the latter. Therefore whenever we get some color from a texture or another sRGB encoded value (sRGB follows a similar curve) we need to convert it into linear space by rising to the power of 2.2 (0.45) and then after we are done we need to move it back to the gamma space by rising it to the power of 1.2/2.2. Monitor will then apply it's 2.2 curve and it all will look beautiful. [Filmic Games: Linear-Space Lighting (i.e. Gamma) (2010)](http://filmicgames.com/archives/299) has great illustrations for that.
+We will call these brighter color values **gamma space** and the unadjusted values **linear space**. You ALWAYS want to do your lighting calculations in the latter. Therefore whenever we get some color from a texture (unless it's linear data like HDR images) or another sRGB encoded value we need to convert it into linear space by rising to the power of 2.2 (0.45) and then after we are done we need to move it back to the gamma space by rising it to the power of 1.2/2.2. Monitor will then apply it's 2.2 curve and it all will look beautiful. [Filmic Games: Linear-Space Lighting (i.e. Gamma) (2010)](http://filmicgames.com/archives/299) has great illustrations for that.
 
+To sum up:
 
 ```javascript
-gamma space     //input colors
+gamma space     //input colors 
      ↓
- pow(2.2)       //Cl = pow(Cg, 2.2)
-    ↓
-linear space
-    ↓
-pow(1.0/2.2)    //Cg = pow(Cc, 1.0/2.2)
-    ↓ 
+pow(x, 2.2)
+     ↓
+linear space    //do the lighting and blending math here
+     ↓
+pow(x, 1.0/2.2)
+     ↓ 
 gamma space     //colors for the screen
 ```
 
 If you still feel confused (I would) please read more on the topic. Remember: Gamma / linear lighting is the *"Number one trick to improve your rendering quality in no time!"*.
+
+More reading:
 
 - [GPU Gems 3: The Importance of Being Linear (2008)](http://http.developer.nvidia.com/GPUGems3/gpugems3_ch24.html)
 - [Coding Labs: Gamma and Linear Spaces](http://www.codinglabs.net/article_gamma_vs_linear.aspx)
@@ -490,20 +494,24 @@ If you still feel confused (I would) please read more on the topic. Remember: Ga
 *203-gamma/Material.frag*:
 
 ```glsl
+//require the lambert diffuse formula from a module via glslify
 #pragma glslify: lambert  = require(glsl-diffuse-lambert)
+
+//glsl-gamma module exports two functions that we can import separately
 #pragma glslify: toLinear = require(glsl-gamma/in)
 #pragma glslify: toGamma  = require(glsl-gamma/out)
 
-varying vec3 ecNormal;
-varying vec3 ecLight;
+//vertex position, normal and light position in the eye/view space
 varying vec3 ecPosition;
+varying vec3 ecNormal;
+varying vec3 ecLightPos;
 
 float PI = 3.14159265;
 
 void main() {
     vec3 N = normalize(ecNormal);
-    vec3 L = normalize(ecLight - ecPosition);
-    vec3 V = normalize(-ecPosition);
+    vec3 L = normalize(ecLightPos - ecPosition);
+
     //float diffuse = lambert(L, N) / PI;
     float diffuse = lambert(L, N);
 
