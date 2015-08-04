@@ -6,9 +6,10 @@ precision highp float;
 #pragma glslify: toLinear = require(glsl-gamma/in)
 #pragma glslify: toGamma  = require(glsl-gamma/out)
 
+//vertex position, normal and light position in the eye/view space
+varying vec3 ecPosition;
 varying vec3 ecNormal;
 varying vec3 ecLightPos;
-varying vec3 ecPosition;
 
 float PI = 3.14159265;
 

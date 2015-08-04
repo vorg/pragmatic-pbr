@@ -5,9 +5,11 @@ precision highp float;
 //require the lambert diffuse formula from a module via glslify
 #pragma glslify: lambert   = require(glsl-diffuse-lambert)
 
+//vertex position, normal and light position in the eye/view space
+varying vec3 ecPosition;
 varying vec3 ecNormal;
 varying vec3 ecLightPos;
-varying vec3 ecPosition;
+
 
 void main() {
     //normalize the normal, we do it here instead of vertex

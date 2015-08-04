@@ -10,10 +10,10 @@ precision highp float;
 //vec4 toLinear(vec4 v) { return v; }
 //vec4 toGamma(vec4 v) { return v; }
 
-varying vec3 ecNormal;
-varying vec3 ecLight1;
-varying vec3 ecLight2;
 varying vec3 ecPosition;
+varying vec3 ecNormal;
+varying vec3 ecLightPos1;
+varying vec3 ecLightPos2;
 
 uniform vec4 uLightColor1;
 uniform vec4 uLightColor2;
@@ -25,9 +25,9 @@ float PI = 3.14159265;
 
 void main() {
     vec3 N = normalize(ecNormal);
-    vec3 L1 = normalize(ecLight1 - ecPosition);
-    vec3 L2 = normalize(ecLight2 - ecPosition);
-    vec3 V = normalize(-ecPosition);
+    vec3 L1 = normalize(ecLightPos1 - ecPosition);
+    vec3 L2 = normalize(ecLightPos2 - ecPosition);
+
     float diffuse1 = lambert(L1, N);
     float diffuse2 = lambert(L2, N);
 

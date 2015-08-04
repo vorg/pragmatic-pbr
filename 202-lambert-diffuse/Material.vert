@@ -14,10 +14,10 @@ uniform vec3 uLightPos;
 
 //vertex position in the eye coordinates (view space)
 varying vec3 ecPosition;
-//light position in the eye coordinates (view space)
-varying vec3 ecLightPos;
 //normal in the eye coordinates (view space)
 varying vec3 ecNormal;
+//light position in the eye coordinates (view space)
+varying vec3 ecLightPos;
 
 void main() {
     //transform vertex into the eye space
