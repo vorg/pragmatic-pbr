@@ -493,35 +493,31 @@ More reading:
 
 *203-gamma/Material.frag*:
 
-```glsl
-//require the lambert diffuse formula from a module via glslify
-#pragma glslify: lambert  = require(glsl-diffuse-lambert)
+The vertex shader for is the same as for lambert diffuse. In the fragment shader we add the following lines:
 
+```glsl
+//import gamma related functions
 //glsl-gamma module exports two functions that we can import separately
 #pragma glslify: toLinear = require(glsl-gamma/in)
 #pragma glslify: toGamma  = require(glsl-gamma/out)
+```
 
-//vertex position, normal and light position in the eye/view space
-varying vec3 ecPosition;
-varying vec3 ecNormal;
-varying vec3 ecLightPos;
+Now we can use them to obtain the correct color values to work with.
 
-float PI = 3.14159265;
+```glsl
+    //surface and light color, full white
+    vec4 baseColor = toLinear(vec4(1.0));   //NEW
+    vec4 lightColor = toLinear(vec4(1.0));  //NEW
 
-void main() {
-    vec3 N = normalize(ecNormal);
-    vec3 L = normalize(ecLightPos - ecPosition);
-
-    //float diffuse = lambert(L, N) / PI;
-    float diffuse = lambert(L, N);
-
-    //albedo
-    vec4 baseColor = toLinear(vec4(1.0));
-
-    vec4 finalColor = vec4(baseColor.rgb * diffuse, 1.0);
-    gl_FragColor = toGamma(finalColor);
+	 //lighting in the linear space
+    vec4 finalColor = vec4(baseColor.rgb * lightColor.rgb * Id, 1.0);
+    gl_FragColor = toGamma(finalColor);     //NEW
 }
 ```
+
+Note: using `toLinear(vec4(1.0))` won't change much because `pow(1, 2.2)` is still `1` but this will become super important when we work with different colors and textures data.
+
+Here is how `toLinear` and `toGamma` are implemented:
 
 *glsl-gamma/in*:
 
@@ -551,7 +547,15 @@ vec4 toGamma(vec4 v) {
 }
 ```
 
-This looks pretty much like an object i've seen somewhere before... as Vincent Scheib is pointing on his [Beautiful Pixels blog](http://beautifulpixels.blogspot.co.uk/2009/10/gamma-correct-lighting-on-moon.html).
+The final code is in [203-gamma/Material.frag](https://github.com/vorg/pragmatic-pbr/blob/master/203-gamma/Material.frag)
+
+To run the example:
+
+```
+beefy 203-gamma/main.js --open --live -- -i plask -g glslify-promise/transform
+```
+
+The final result looks pretty much like an object I've seen somewhere before... as Vincent Scheib is pointing on his [Beautiful Pixels blog](http://beautifulpixels.blogspot.co.uk/2009/10/gamma-correct-lighting-on-moon.html).
 
 ![](img/203_gamma_moon.png)
 
@@ -565,7 +569,13 @@ I made a separate example with two lights for you to play with and see the resul
 
 [![](img/204.jpg)](http://marcinignac.com/blog/pragmatic-pbr-setup-and-gamma/204-gamma-color/)
 
-Try turning conversion to linear and gamma space to see the difference. Do you see that ugly brown on the left (uncorrected) side?
+To run the example:
+
+```
+beefy 204-gamma-color/main.js --open --live -- -i plask -g glslify-promise/transform
+```
+
+Try turning on/off the conversion to linear and gamma space to see the difference. Do you see that ugly brown on the left (uncorrected) side?
 
 ![](img/204_comparison.jpg)
 
@@ -573,44 +583,129 @@ Try turning conversion to linear and gamma space to see the difference. Do you s
 
 [![](img/205.jpg)](http://marcinignac.com/blog/pragmatic-pbr-setup-and-gamma/205-gamma-texture/)
 
-The brick texture comes from [Pixar One Twenty Eight](https://community.renderman.pixar.com/article/114/library-pixar-one-twenty-eight.html) - a collection of classic textures from Pixar. Only some of them are suitable for physically based rendering as many include lighting / shadows baked together with color.
+Remember when I was talking about sRGB curves and textures? When using texture colors we need to bring them to the linear space as well:
 
-![](img/205_pixar_textures.jpg)
+```glsl
+vec4 baseColor = toLinear(texture2D(uAlbedoTex, vTexCoord0));
+```
+
+But first we need to create a texture in `pex`:
+
+```javascript
+//define path to the assets directory, here it's above (..) the example
+//folder so all examples can share the assets. `__dirname` is a nodejs
+//built-in variable pointing to the folder where the js script lives,
+//We need that to make it work in Plask.
+var ASSETS_DIR = isBrowser ? '../assets' :  __dirname + '/../assets';
+
+Then we declare the image resource to be loaded before init. `texture` is just a name we will use to refer to it later.
+
+```javascript
+resources: {
+   texture: { image: ASSETS_DIR + '/textures/Pink_tile_pxr128.jpg'}
+},
+```
+
+Then in `init()` we can create the texture:
+
+```javascript
+this.texture = ctx.createTexture2D(
+  res.texture, 
+  res.texture.width, 
+  res.texture.height, 
+  { repeat: true }
+);
+```
+
+And use it with the shader in `draw()`:
+
+```javascript
+ctx.bindTexture(this.texture, 0);
+this.program.setUniform('uAlbedoTex', 0);
+```
+
+Why `uAlbedoTex`? Albedo is the base color reflected by the surface. In PBR it's preferred to the `diffuseColor` name as that would imply that lighting information is included in the texture data (e.g. imagine bricks with shadows in the cracks between them). Later we might use `baseColor` name which will be albedo color for diffuse materials but specular color for metals.
+
+To run the example:
+
+```
+beefy 205-gamma-texture/main.js --open --live -- -i plask -g glslify-promise/transform
+```
+
+The brick texture comes from [Pixar One Twenty Eight](https://community.renderman.pixar.com/article/114/library-pixar-one-twenty-eight.html) - a collection of classic textures from Pixar. Only some of them are suitable for physically based rendering as many include lighting / shadows baked together with color but you can find some nice stuff there:
+
+[![](img/205_pixar_textures.jpg)](https://community.renderman.pixar.com/article/114/library-pixar-one-twenty-eight.html)
 
 
 ## 206-gamma-ext-srgb
 
-[EXT_sRGB Extension](https://www.khronos.org/registry/webgl/extensions/EXT_sRGB/)
+Decoding texture colors into linear space is a common opperation therefore the [EXT_sRGB](https://www.khronos.org/registry/webgl/extensions/EXT_sRGB/) extension was created. Using this extension textures with sRGB data can be decoded for us on the fly even before sampling. As explained in [The Importance of Being Linear](http://http.developer.nvidia.com/GPUGems3/gpugems3_ch24.html) this is preferred method:
+
+> The automatic sRGB corrections are free and are preferred to performing the corrections manually in a shader after each texture acces, because each pow instruction is scalar and expanded to two instructions. Also, manual correction happens after filtering, which is incorrectly performed in a nonlinear space.
+
+I won't use it for now as it's not supported everywhere and I want to avoid automagic.
+
+To enable this extension in WebGL you need to call:
 
 ```javascript
-gl.getExtension('EXT_sRGB')
+var ext = gl.getExtension('EXT_sRGB')
 ```
 
+Then when uploading texture data to the GPU we will use `ext.SRGB_EXT` instead of `gl.RGB`.
+
+
+```javascript
+gl.texImage2D(gl.TEXTURE_2D, 0, ext.SRGB_EXT, gl.UNSIGNED_BYTE, ext.SRGB_EXT, data);
 ```
-//sample color as usual, the RGB values will be converted to linear space for you
+
+In `pex` we specify sRGB data when creating the texture. Context will check for the `EXT_sRGB` extension and enable it for us when available./
+
+```javascript
+this.texture = ctx.createTexture2D(
+   res.texture,
+   res.texture.width,
+   res.texture.height, 
+   { repeat: true, format: ctx.SRGB }
+);
+```
+
+Then in our shader we can now skip `toLinear` call for the texture data
+
+```glsl
+//sample color as usual, the RGB values
+//will be converted to linear space for you
 vec4 baseColor = texture2D(uAlbedoTex, vTexCoord0 * vec2(3.0, 2.0));
 vec4 finalColor = vec4(baseColor.rgb * diffuse, 1.0);
 
-//we still need to bring it back to the gamma color space as we don't have sRGB aware render buffer here
+//we still need to bring it back to the gamma
+//color space as we don't have sRGB aware render buffer here
 gl_FragColor = toGamma(finalColor);
 ```
 
-According to [WebGL Report](http://webglreport.com/?v=1) supported in:
+To run the example:
+
+```
+beefy 206-gamma-ext-srgb/main.js --open --live -- -i plask -g glslify-promise/transform
+```
+
+
+According to [WebGL Report](http://webglreport.com/?v=1) `EXT_sRGB ` is supported in:
 
 - [x] Chrome 43+ on OSX
 - [x] Firefox 39+ on OSX
 - [x] Webkit Nighly r186719 on OSX
 - [ ] Safari 8.0.7 on OSX
 
-Additionaly
+Additionally
 
-- [ ] Plask v3 (due to images being uploaded to the GPU always as RGB)
+- [ ] it doesn't work in Plask v3 (due to images being uploaded to the GPU always as RGB)
 - [x] EXT_sRGB will be in core WebGL 2.0
 
 If you don't have EXT_sRGB enabled or supported you will get brighter image than expected due to
 
 [![](img/206_incorrect.jpg)](http://marcinignac.com/blog/pragmatic-pbr-setup-and-gamma/206-gamma-ext-srgb/)
 
+Uff, that's the end of Part 2. Next time we will talk about hight dynamic range (HDR) which is intro to Image Based Lighting ("the number 2" trick in PBR).
 
 ## Comments, feedback and contributing
 

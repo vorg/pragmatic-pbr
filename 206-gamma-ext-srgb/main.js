@@ -16,7 +16,7 @@ Window.create({
     resources: {
         vert: { glsl: glslify(__dirname + '/Material.vert') },
         frag: { glsl: glslify(__dirname + '/Material.frag') },
-        texture: { image: ASSETS_DIR + '/textures/Pink_tile_pxr128.jpg'} //TODO: correct path for the browser build
+        texture: { image: ASSETS_DIR + '/textures/Pink_tile_pxr128.jpg'}
     },
     init: function() {
         var ctx = this.getContext();
@@ -33,7 +33,7 @@ Window.create({
 
         this.program = ctx.createProgram(res.vert, res.frag);
 
-        this.texture = ctx.createTexture2D(res.texture, res.texture.width, res.texture.height, { repeat: true, format: ctx.SRGB, mipmap: true });
+        this.texture = ctx.createTexture2D(res.texture, res.texture.width, res.texture.height, { repeat: true, format: ctx.SRGB });
 
         var g = createSphere();
 

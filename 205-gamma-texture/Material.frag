@@ -13,6 +13,9 @@ varying vec2 vTexCoord0;
 
 uniform sampler2D uAlbedoTex;
 
+uniform bool uLinearSpace;
+uniform bool uCorrectGamma;
+
 float PI = 3.14159265;
 
 void main() {
@@ -21,8 +24,10 @@ void main() {
 
     float diffuse = lambert(L, N);
 
+    vec4 baseColor = texture2D(uAlbedoTex, vTexCoord0 * vec2(3.0, 2.0));
+    baseColor.rgb = uLinearSpace ? toLinear(baseColor.rgb) : baseColor.rgb;
+
     //linear space lighting
-    vec4 baseColor = toLinear(texture2D(uAlbedoTex, vTexCoord0 * vec2(3.0, 2.0)));
     vec4 finalColor = vec4(baseColor.rgb * diffuse, 1.0);
-    gl_FragColor = toGamma(finalColor);
+    gl_FragColor = uCorrectGamma ? toGamma(finalColor) : finalColor;
 }

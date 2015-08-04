@@ -17,8 +17,8 @@ Window.create({
     init: function() {
         var ctx = this.getContext();
 
-        this.lightColor1 = [0.0, 1, 0.0, 1.0];
-        this.lightColor2 = [1, 0.0, 0.0, 1.0];
+        this.lightColor1 = [0.0, 0.9, 0.0, 1.0];
+        this.lightColor2 = [0.9, 0.0, 0.0, 1.0];
         this.correctGamma = true;
         this.linearSpace = true;
 

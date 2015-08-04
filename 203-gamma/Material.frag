@@ -2,7 +2,10 @@
 precision highp float;
 #endif
 
-#pragma glslify: lambert   = require(glsl-diffuse-lambert)
+//require the lambert diffuse formula from a module via glslify
+#pragma glslify: lambert  = require(glsl-diffuse-lambert)
+
+//glsl-gamma module exports two functions that we can import separately
 #pragma glslify: toLinear = require(glsl-gamma/in)
 #pragma glslify: toGamma  = require(glsl-gamma/out)
 
@@ -21,8 +24,8 @@ void main() {
     float Id = lambert(L, N);
 
     //surface and light color, full white
-    vec4 baseColor = vec4(1.0);
-    vec4 lightColor = vec4(1.0);
+    vec4 baseColor = toLinear(vec4(1.0));
+    vec4 lightColor = toLinear(vec4(1.0));
 
     vec4 finalColor = vec4(baseColor.rgb * lightColor.rgb * Id, 1.0);
     gl_FragColor = toGamma(finalColor);
