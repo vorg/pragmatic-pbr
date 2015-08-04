@@ -41,9 +41,12 @@ To make sure everything works run the following command while in `pragmatic-pbr`
 beefy 201-init/main.js --open --live -- -i plask -g glslify-promise/transform
 ```
 
-This should open your browser at [http://127.0.0.1:9966](http://127.0.0.1:9966) and display a rectangle that changes colors (click to see live version)
+This should open your browser at [http://127.0.0.1:9966](http://127.0.0.1:9966) and display a rectangle that changes colors
 
 [![](img/201.jpg)](http://marcinignac.com/blog/pragmatic-pbr-setup-and-gamma/201-init/)
+
+*(click to see the live version)*
+
 
 What is beefy? [Beefy](https://www.npmjs.com/package/beefy) is a local server that boundles our code and required node modules into one JS file using [browserify](http://browserify.org) that can be loaded by the browser. It also watches for changes (when run with `--live` flag) and will reload the page when you edit and save the JS file. Running a local server also solves a number of issues with AJAX requests and local file access policies in the browsers. In the `-- -i plask` part we have `browserify` flags where we ignore `plask` module and run our source code through `glslify` transform that will inline all the GLSL shaders. [Plask](http://plask.org) is a multimedia programming environment for OSX built on top of NodeJS and implementing WebGL v1.0+ spec. You can use it to run WebGL apps on OSX without the browser. I use it for development but we won't be using it in this tutorial.
 
@@ -163,15 +166,19 @@ Window.create({
 
 [![](img/202.jpg)](http://marcinignac.com/blog/pragmatic-pbr-setup-and-gamma/202-lambert-diffuse/)
 
+*(click to see the live version)*
+
 Let's start with a simple scene containing one sphere and a single point light. We will make a number of assumptions: the surface of the sphere is white, the light color is white and there is no light attenuation (light loosing intensity with distance) and the light's position is static (no animation) and located at `[10,10,10]` (top right, in front of the sphere).
 
 ### Diffuse Lighting
 
 In order to calculate the appearance of a surface under these lighting conditions we need a lighting (shading) model. One of the simplest and most commonly used shading models is [Lambertian reflectance](https://en.wikipedia.org/wiki/Lambertian_reflectance) also known as *Lambert diffuse* or just *Lambert*. It models a [diffuse reflection](https://en.wikipedia.org/wiki/Diffuse_reflection) (light reflecting into multiple directions -> blurry reflection) for matte / rough objects. It doesn't handle [specular reflection](https://en.wikipedia.org/wiki/Specular_reflection) (light reflecting into single direction causing -> sharp, mirror / highlight like) but we don't need that yet. Lambert diffuse obeys [Lambert's cosine law](https://en.wikipedia.org/wiki/Lambert%27s_cosine_law) stating that light intensity observed on the surface is proportional to the cosine of the angle between direction towards the light and [the surface normal](https://en.wikipedia.org/wiki/Normal_(geometry)). 
 
+![](img/202_lambert_diffuse.jpg)
+
 If both direction towards the light and normal point in the same direction the angle will be `0` and `cos(0) = 1` therefore intensity will be the strongest. At `45' deg` we have are losing 30% of the intensity `cos(PI/4) = 0.707`, dropping to zero at `90' deg` as `cos(PI/2) = 0`.
 
-![](img/202_lambert_diffuse.jpg)
+![](img/202_angles.jpg)
 
 We can measure the angle between two vectors using a [dot products](https://en.wikipedia.org/wiki/Dot_product) `N·L`
 
@@ -490,6 +497,7 @@ More reading:
 
 [![](img/203.jpg)](http://marcinignac.com/blog/pragmatic-pbr-setup-and-gamma/203-gamma/)
 
+*(click to see the live version)*
 
 *203-gamma/Material.frag*:
 
@@ -569,6 +577,8 @@ I made a separate example with two lights for you to play with and see the resul
 
 [![](img/204.jpg)](http://marcinignac.com/blog/pragmatic-pbr-setup-and-gamma/204-gamma-color/)
 
+*(click to see the live version)*
+
 To run the example:
 
 ```
@@ -582,6 +592,8 @@ Try turning on/off the conversion to linear and gamma space to see the differenc
 ## 205-gamma-texture
 
 [![](img/205.jpg)](http://marcinignac.com/blog/pragmatic-pbr-setup-and-gamma/205-gamma-texture/)
+
+*(click to see the live version)*
 
 Remember when I was talking about sRGB curves and textures? When using texture colors we need to bring them to the linear space as well:
 
@@ -704,6 +716,8 @@ Additionally
 If you don't have EXT_sRGB enabled or supported you will get brighter image than expected due to
 
 [![](img/206_incorrect.jpg)](http://marcinignac.com/blog/pragmatic-pbr-setup-and-gamma/206-gamma-ext-srgb/)
+
+*(click to see the live version)*
 
 Uff, that's the end of Part 2. Next time we will talk about hight dynamic range (HDR) which is intro to Image Based Lighting ("the number 2" trick in PBR).
 
