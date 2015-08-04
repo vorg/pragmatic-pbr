@@ -66,7 +66,7 @@ Window.create({
         //Create sphere geometry - an object with positions, normals and cells/faces
         var g = createSphere();
 
-        //Definie mesh attribute layout
+        //Define mesh attribute layout
         //ATTRIB_POSITION and ATTRIB_NORMAL are slot numbers
         //matching attributes in the shader aPosition and aNormal
         var attributes = [

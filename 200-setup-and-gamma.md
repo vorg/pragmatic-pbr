@@ -48,7 +48,7 @@ This should open your browser at [http://127.0.0.1:9966](http://127.0.0.1:9966) 
 *(click to see the live version)*
 
 
-What is beefy? [Beefy](https://www.npmjs.com/package/beefy) is a local server that boundles our code and required node modules into one JS file using [browserify](http://browserify.org) that can be loaded by the browser. It also watches for changes (when run with `--live` flag) and will reload the page when you edit and save the JS file. Running a local server also solves a number of issues with AJAX requests and local file access policies in the browsers. In the `-- -i plask` part we have `browserify` flags where we ignore `plask` module and run our source code through `glslify` transform that will inline all the GLSL shaders. [Plask](http://plask.org) is a multimedia programming environment for OSX built on top of NodeJS and implementing WebGL v1.0+ spec. You can use it to run WebGL apps on OSX without the browser. I use it for development but we won't be using it in this tutorial.
+What is beefy? [Beefy](https://www.npmjs.com/package/beefy) is a local server that bundles our code and required node modules into one JS file using [browserify](http://browserify.org) that can be loaded by the browser. It also watches for changes (when run with `--live` flag) and will reload the page when you edit and save the JS file. Running a local server also solves a number of issues with AJAX requests and local file access policies in the browsers. In the `-- -i plask` part we have `browserify` flags where we ignore `plask` module and run our source code through `glslify` transform that will inline all the GLSL shaders. [Plask](http://plask.org) is a multimedia programming environment for OSX built on top of NodeJS and implementing WebGL v1.0+ spec. You can use it to run WebGL apps on OSX without the browser. I use it for development but we won't be using it in this tutorial.
 
 ### Deploying the code
 
@@ -172,7 +172,7 @@ Let's start with a simple scene containing one sphere and a single point light. 
 
 ### Diffuse Lighting
 
-In order to calculate the appearance of a surface under these lighting conditions we need a lighting (shading) model. One of the simplest and most commonly used shading models is [Lambertian reflectance](https://en.wikipedia.org/wiki/Lambertian_reflectance) also known as *Lambert diffuse* or just *Lambert*. It models a [diffuse reflection](https://en.wikipedia.org/wiki/Diffuse_reflection) (light reflecting into multiple directions -> blurry reflection) for matte / rough objects. It doesn't handle [specular reflection](https://en.wikipedia.org/wiki/Specular_reflection) (light reflecting into single direction causing -> sharp, mirror / highlight like) but we don't need that yet. Lambert diffuse obeys [Lambert's cosine law](https://en.wikipedia.org/wiki/Lambert%27s_cosine_law) stating that light intensity observed on the surface is proportional to the cosine of the angle between direction towards the light and [the surface normal](https://en.wikipedia.org/wiki/Normal_(geometry)). 
+In order to calculate the appearance of a surface under these lighting conditions we need a lighting (shading) model. One of the simplest and most commonly used shading models is [Lambertian reflectance](https://en.wikipedia.org/wiki/Lambertian_reflectance) also known as *Lambert diffuse* or just *Lambert*. It models a [diffuse reflection](https://en.wikipedia.org/wiki/Diffuse_reflection) (light reflecting into multiple directions -> blurry reflection) for matte / rough objects. It doesn't handle [specular reflection](https://en.wikipedia.org/wiki/Specular_reflection) (light reflecting into single direction causing -> sharp, mirror / highlight like) but we don't need that yet. Lambert diffuse obeys [Lambert's cosine law](https://en.wikipedia.org/wiki/Lambert%27s_cosine_law) stating that light intensity observed on the surface is proportional to the cosine of the angle between direction towards the light and [the surface normal](https://en.wikipedia.org/wiki/Normal_(geometry)).
 
 ![](img/202_lambert_diffuse.jpg)
 
@@ -281,11 +281,11 @@ void main() {
     vec4 pos = uViewMatrix * uModelMatrix * aPosition;
     ecPosition = pos.xyz;
     ecNormal = uNormalMatrix * aNormal;
-    
+
     ecLightPos = vec3(uViewMatrix * uModelMatrix * vec4(uLightPos, 1.0));
-    
+
     //project the vertex, the rest is handled by WebGL
-    gl_Position = uProjectionMatrix * pos;   
+    gl_Position = uProjectionMatrix * pos;
 }
 ```
 
@@ -319,7 +319,7 @@ void main() {
 
     //calculate direction towards the light
     vec3 L = normalize(ecLightPos - ecPosition);
-    
+
     //diffuse intensity
     float Id = lambert(L, N);
 
@@ -407,7 +407,7 @@ Window.create({
         //Create sphere geometry - an object with positions, normals and cells/faces
         var g = createSphere();
 
-        //Definie mesh attribute layout
+        //Define mesh attribute layout
         //ATTRIB_POSITION and ATTRIB_NORMAL are slot numbers
         //matching attributes in the shader aPosition and aNormal
         var attributes = [
@@ -462,7 +462,7 @@ beefy 202-lambert-diffuse/main.js --open --live -- -i plask -g glslify-promise/t
 
 ## 203-gamma
 
-PBR looks good because it's trying to avoid errors and approximations that accumulate across different rendering stages (color sampling, lighting / shading, blending etc). One of these assumptions is that that half the value 0.5 equals half the brightness. Unfortunately this is not how things work. Most screen we are using nowadays follow so called gamma curve that maps the input value to the brightness of a pixel in a non linear way. 
+PBR looks good because it's trying to avoid errors and approximations that accumulate across different rendering stages (color sampling, lighting / shading, blending etc). One of these assumptions is that that half the value 0.5 equals half the brightness. Unfortunately this is not how things work. Most screen we are using nowadays follow so called gamma curve that maps the input value to the brightness of a pixel in a non linear way.
 
 Source: [Wikipedia: Gamma_correction](https://en.wikipedia.org/wiki/Gamma_correction)
 ![](img/203_gamma_graph.png)
@@ -476,14 +476,14 @@ We will call these brighter color values **gamma space** and the unadjusted valu
 To sum up:
 
 ```javascript
-gamma space     //input colors 
+gamma space     //input colors
      ↓
 pow(x, 2.2)
      ↓
 linear space    //do the lighting and blending math here
      ↓
 pow(x, 1.0/2.2)
-     ↓ 
+     ↓
 gamma space     //colors for the screen
 ```
 
@@ -622,9 +622,9 @@ Then in `init()` we can create the texture:
 
 ```javascript
 this.texture = ctx.createTexture2D(
-  res.texture, 
-  res.texture.width, 
-  res.texture.height, 
+  res.texture,
+  res.texture.width,
+  res.texture.height,
   { repeat: true }
 );
 ```
@@ -651,7 +651,7 @@ The brick texture comes from [Pixar One Twenty Eight](https://community.renderma
 
 ## 206-gamma-ext-srgb
 
-Decoding texture colors into linear space is a common opperation therefore the [EXT_sRGB](https://www.khronos.org/registry/webgl/extensions/EXT_sRGB/) extension was created. Using this extension textures with sRGB data can be decoded for us on the fly even before sampling. As explained in [The Importance of Being Linear](http://http.developer.nvidia.com/GPUGems3/gpugems3_ch24.html) this is preferred method:
+Decoding texture colors into linear space is a common operation therefore the [EXT_sRGB](https://www.khronos.org/registry/webgl/extensions/EXT_sRGB/) extension was created. Using this extension textures with sRGB data can be decoded for us on the fly even before sampling. As explained in [The Importance of Being Linear](http://http.developer.nvidia.com/GPUGems3/gpugems3_ch24.html) this is preferred method:
 
 > The automatic sRGB corrections are free and are preferred to performing the corrections manually in a shader after each texture acces, because each pow instruction is scalar and expanded to two instructions. Also, manual correction happens after filtering, which is incorrectly performed in a nonlinear space.
 
@@ -676,7 +676,7 @@ In `pex` we specify sRGB data when creating the texture. Context will check for 
 this.texture = ctx.createTexture2D(
    res.texture,
    res.texture.width,
-   res.texture.height, 
+   res.texture.height,
    { repeat: true, format: ctx.SRGB }
 );
 ```
