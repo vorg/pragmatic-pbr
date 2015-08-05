@@ -714,7 +714,7 @@ Additionally
 - [ ] it doesn't work in Plask v3 (due to images being uploaded to the GPU always as RGB)
 - [x] EXT_sRGB will be in core WebGL 2.0
 
-If you don't have EXT_sRGB enabled or supported you will get brighter image than expected due to
+If you don't have EXT_sRGB enabled or supported you will get brighter image than expected due to applying gamma to non-linear data (still in gamma space).
 
 [![](img/206_incorrect.jpg)](http://marcinignac.com/blog/pragmatic-pbr-setup-and-gamma/206-gamma-ext-srgb/)
 
