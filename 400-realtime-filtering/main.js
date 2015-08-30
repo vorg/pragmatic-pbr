@@ -14,6 +14,7 @@ var PerspCamera  = require('pex-cam/PerspCamera');
 var Arcball      = require('pex-cam/Arcball');
 var fs           = require('fs');
 var hammersley   = require('./hammersley');
+var GUI          = require('pex-gui');
 
 var ASSETS_DIR = isBrowser ? '../assets' :  __dirname + '/../assets';
 
@@ -31,9 +32,15 @@ Window.create({
         reflectionMap: { binary: ASSETS_DIR + '/envmaps/pisa_256.hdr' },
         debugReflectionMap: { image: ASSETS_DIR + '/envmaps/test.jpg' }
     },
+    roughness: 0.01,
     exposure: 1,
     init: function() {
         var ctx = this.getContext();
+
+        this.gui = new GUI(ctx, this.getWidth(), this.getHeight());
+        this.addEventListener(this.gui);
+        this.gui.addParam('roughness', this, 'roughness');
+        this.gui.addParam('exposure', this, 'exposure');
 
         this.camera = new PerspCamera(60, this.getAspectRatio(), 0.1, 100);
         this.camera.lookAt([0, 1, 4], [0, 0, 0], [0, 1, 0]);
@@ -61,7 +68,7 @@ Window.create({
             console.log(e);
         }
 
-        var numSamples = 128;
+        var numSamples = 256;
         var hammersleyPointSet = new Float32Array(4 * numSamples);
         for(var i=0; i<numSamples; i++) {
             var p = hammersley(i, numSamples)
@@ -147,8 +154,11 @@ Window.create({
             ctx.setDepthTest(true);
             ctx.bindProgram(this.reflectionProgram);
             this.reflectionProgram.setUniform('uExposure', this.exposure);
+            this.reflectionProgram.setUniform('uRoughness', this.roughness);
             ctx.bindMesh(this.sphereMesh);
             ctx.drawMesh();
         }
+
+        this.gui.draw();
     }
 })

@@ -11,6 +11,7 @@ uniform mat4 uInverseViewMatrix;
 uniform sampler2D uReflectionMap;
 uniform sampler2D uHammersleyPointSetMap;
 uniform float uExposure;
+uniform float uRoughness;
 
 varying vec3 ecPosition;
 varying vec3 ecNormal;
@@ -73,7 +74,7 @@ vec3 ImportanceSampleGGX(vec2 Xi, float Roughness, vec3 N) {
 //TODO: N & L, which coordinate space they are in?
 vec3 SpecularIBL(vec3 SpecularColor, float Roughness, vec3 N, vec3 V) {
     vec3 SpecularLighting = vec3(0.0);
-    const int NumSamples = 128;//1024;
+    const int NumSamples = 256;
     for(int i=0; i<NumSamples; i++) {
         vec2 Xi = Hammersley(i, NumSamples);
         vec3 H = ImportanceSampleGGX(Xi, Roughness, N);
@@ -103,7 +104,7 @@ void main() {
     vec3 wcNormal = vec3(uInverseViewMatrix * vec4(ecNormal, 0.0));
 
     vec3 reflectionWorld = reflect(-wcEyeDir, normalize(wcNormal));
-    gl_FragColor.rgb = SpecularIBL(vec3(0.99), 0.01, wcNormal, wcEyeDir);
+    gl_FragColor.rgb = SpecularIBL(vec3(0.99), uRoughness, wcNormal, wcEyeDir);
     gl_FragColor.rgb *= uExposure;
     gl_FragColor.rgb = tonemapReinhard(gl_FragColor.rgb);
     gl_FragColor.rgb = toGamma(gl_FragColor.rgb);
