@@ -38,13 +38,23 @@ vec2 Hammersley(int i, int N) {
 //                                          n.v           //                           (0.8 + 0.5*a)^2
 //G(l,v,h) = G1(l)* G1(v)    G1(v) = -----------------    //  where is that from?  k = ---------------
 //                                   (n.v) * (1-k) + k    //                                  2
-float G_Smith(float Roughness, float NoV, float NoL) {
+float G_Smith(float Roughness, float NoL, float NoV) {
+    //Source?
     //float a = Roughness * Roughness;
     //float k = pow(0.8 + 0.5 * a, 2.0) / 2.0;
-    float a = Roughness + 1;
-    float k = a * a / 8;
+
+    //Source: UE4
+    //float a = Roughness + 1;
+    //float k = a * a / 8;
+
+    //Source: ? - my implementation of ggx
+    float a = Roughness * Roughness;
+    float k = a / 2.0;
+
+    //Source: UE4
     float G1l = NoL / (NoL * (1.0 - k) + k);
     float G1v = NoV / (NoV * (1.0 - k) + k);
+
     float Glvn = G1l * G1v;
     return Glvn;
 }
