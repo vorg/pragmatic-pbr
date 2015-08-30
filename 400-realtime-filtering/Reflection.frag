@@ -60,7 +60,7 @@ vec3 ImportanceSampleGGX(vec2 Xi, float Roughness, vec3 N) {
     H.y = SinTheta * sin(Phi);
     H.z = CosTheta;
 
-    //TODO: What's the coordinate system here? shoudn't up vector be 0,1,0
+    //Tangent space vectors
     vec3 UpVector = abs(N.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
     vec3 TangentX = normalize(cross(UpVector, N));
     vec3 TangentY = cross(N, TangentX);
