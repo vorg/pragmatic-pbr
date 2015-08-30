@@ -68,7 +68,7 @@ Window.create({
             console.log(e);
         }
 
-        var numSamples = 256;
+        var numSamples = 128;
         var hammersleyPointSet = new Float32Array(4 * numSamples);
         for(var i=0; i<numSamples; i++) {
             var p = hammersley(i, numSamples)

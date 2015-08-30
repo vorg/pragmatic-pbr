@@ -84,7 +84,7 @@ vec3 ImportanceSampleGGX(vec2 Xi, float Roughness, vec3 N) {
 //TODO: N & L, which coordinate space they are in?
 vec3 SpecularIBL(vec3 SpecularColor, float Roughness, vec3 N, vec3 V) {
     vec3 SpecularLighting = vec3(0.0);
-    const int NumSamples = 256;
+    const int NumSamples = 128;
     for(int i=0; i<NumSamples; i++) {
         vec2 Xi = Hammersley(i, NumSamples);
         vec3 H = ImportanceSampleGGX(Xi, Roughness, N);
