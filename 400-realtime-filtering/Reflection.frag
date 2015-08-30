@@ -50,6 +50,7 @@ float G_Smith(float Roughness, float NoV, float NoL) {
 
 //Based on Real Shading in Unreal Engine 4
 vec3 ImportanceSampleGGX(vec2 Xi, float Roughness, vec3 N) {
+    //this is mapping 2d point to a hemisphere but additionally we add spread by roughness
     float a = Roughness * Roughness;
     float Phi = 2.0 * PI * Xi.x;
     float CosTheta = sqrt((1.0 - Xi.y) / (1.0 + (a*a - 1.0) * Xi.y));
@@ -65,8 +66,7 @@ vec3 ImportanceSampleGGX(vec2 Xi, float Roughness, vec3 N) {
     vec3 TangentY = cross(N, TangentX);
 
     //Tangent to World Space
-    //return TangentX * H.x + TangentY * H.y + N * H.z;
-    return vec3(CosTheta);
+    return TangentX * H.x + TangentY * H.y + N * H.z;
 }
 
 //Based on Real Shading in Unreal Engine 4
