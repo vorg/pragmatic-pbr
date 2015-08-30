@@ -83,18 +83,17 @@ vec3 SpecularIBL(vec3 SpecularColor, float Roughness, vec3 N, vec3 V) {
         float NoV = saturate(dot(N, V));
         float NoL = saturate(dot(N, L));
         float NoH = saturate(dot(N, H));
-        float VoH = saturate(dot(V, V));
+        float VoH = saturate(dot(V, H));
 
         if (NoL > 0.0) {
             vec3 SampleColor = sampleEvnMap(L);
-            float G = G_Smith(Roughness, NoV, NoL);
+            float G = G_Smith(Roughness, NoL, NoV);
             float Fc = pow(1.0 - VoH, 5.0);
-            vec3 F = (1.0 - Fc) * SpecularColor;
+            vec3 F = (1.0 - Fc) * SpecularColor + Fc;
 
             SpecularLighting += SampleColor * F * G * VoH / (NoH * NoV);
         }
     }
-    //return SpecularLighting;
     return SpecularLighting / NumSamples;
 }
 
