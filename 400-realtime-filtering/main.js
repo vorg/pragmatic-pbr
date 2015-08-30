@@ -94,10 +94,6 @@ Window.create({
         ];
         var sphereIndices = { data: sphere.cells, usage: ctx.STATIC_DRAW };
         this.sphereMesh = ctx.createMesh(attributes, sphereIndices, ctx.TRIANGLES);
-
-        for(var i=0; i<5; i++) {
-            console.log(hammersley(i, 5));
-        }
     },
     watchShaders: function() {
         fs.watchFile(__dirname + '/Reflection.frag', function() {
