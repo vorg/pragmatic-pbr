@@ -103,8 +103,7 @@ void main() {
     vec3 wcNormal = vec3(uInverseViewMatrix * vec4(ecNormal, 0.0));
 
     vec3 reflectionWorld = reflect(-wcEyeDir, normalize(wcNormal));
-    //gl_FragColor.rgb = sampleEvnMap(reflectionWorld);
-    gl_FragColor.rgb = SpecularIBL(vec3(0.99), 0.01, ecNormal, ecEyeDir);
+    gl_FragColor.rgb = SpecularIBL(vec3(0.99), 0.01, wcNormal, wcEyeDir);
     gl_FragColor.rgb *= uExposure;
     //gl_FragColor.rgb = tonemapReinhard(gl_FragColor.rgb);
     //gl_FragColor.rgb = toGamma(gl_FragColor.rgb);
