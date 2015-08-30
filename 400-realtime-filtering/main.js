@@ -40,7 +40,7 @@ Window.create({
         this.gui = new GUI(ctx, this.getWidth(), this.getHeight());
         this.addEventListener(this.gui);
         this.gui.addParam('roughness', this, 'roughness');
-        this.gui.addParam('exposure', this, 'exposure');
+        this.gui.addParam('exposure', this, 'exposure', { min: 0, max: 3});
 
         this.camera = new PerspCamera(60, this.getAspectRatio(), 0.1, 100);
         this.camera.lookAt([0, 1, 4], [0, 0, 0], [0, 1, 0]);
