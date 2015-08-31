@@ -1,1 +1,0 @@
-http://learnopengl.com/#!Advanced-OpenGL/Cubemaps

@@ -27,7 +27,8 @@ Window.create({
         reflectionFrag: { glsl: glslify(__dirname + '/Reflection.frag') },
         showColorsVert: { glsl: glslify(__dirname + '/../assets/glsl/ShowColors.vert') },
         showColorsFrag: { glsl: glslify(__dirname + '/../assets/glsl/ShowColors.frag') },
-        reflectionMap: { binary: ASSETS_DIR + '/envmaps/grace-new-128.hdr' },
+        reflectionMap: { binary: ASSETS_DIR + '/envmaps/pisa_256.hdr' },
+        reflectionMap2: { binary: ASSETS_DIR + '/envmaps/grace-new-128.hdr' },
         filmLut: { image: ASSETS_DIR + '/textures/FilmLut.png' }
     },
     exposure: 1,
