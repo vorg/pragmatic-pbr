@@ -26,7 +26,7 @@ Window.create({
         showColorsVert: { glsl: glslify(__dirname + '/../assets/glsl/ShowColors.vert') },
         showColorsFrag: { glsl: glslify(__dirname + '/../assets/glsl/ShowColors.frag') },
         envMap: { image: ASSETS_DIR + '/envmaps/pisa_preview.jpg' },
-        testEnvMap: { image: ASSETS_DIR + '/envmaps/test.jpg' }
+        envMapDebug: { image: ASSETS_DIR + '/envmaps/test.jpg' }
     },
     debugMode: false,
     init: function() {
@@ -62,7 +62,7 @@ Window.create({
         this.showColorsProgram = ctx.createProgram(res.showColorsVert, res.showColorsFrag);
 
         this.envMap = ctx.createTexture2D(res.envMap);
-        this.envMapDebug = ctx.createTexture2D(res.testEnvMap);
+        this.envMapDebug = ctx.createTexture2D(res.envMapDebug);
 
         var skybox = createCube(20);
         var skyboxAttributes = [
