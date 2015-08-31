@@ -25,8 +25,8 @@ Window.create({
         reflectionFrag: { glsl: glslify(__dirname + '/Reflection.frag') },
         showColorsVert: { glsl: glslify(__dirname + '/../assets/glsl/ShowColors.vert') },
         showColorsFrag: { glsl: glslify(__dirname + '/../assets/glsl/ShowColors.frag') },
-        reflectionMap: { image: ASSETS_DIR + '/envmaps/pisa_preview.jpg' },
-        debugReflectionMap: { image: ASSETS_DIR + '/envmaps/test.jpg' }
+        envMap: { image: ASSETS_DIR + '/envmaps/pisa_preview.jpg' },
+        testEnvMap: { image: ASSETS_DIR + '/envmaps/test.jpg' }
     },
     debugMode: false,
     init: function() {
@@ -47,22 +47,22 @@ Window.create({
         this.modelMatrix = Mat4.create();
         ctx.setModelMatrix(this.modelMatrix);
 
-        this.debug = new Draw(ctx);
+        this.debugDraw = new Draw(ctx);
 
         var res = this.getResources();
 
         this.skyboxProgram = ctx.createProgram(res.skyboxVert, res.skyboxFrag);
         ctx.bindProgram(this.skyboxProgram);
-        this.skyboxProgram.setUniform('uReflectionMap', 0);
+        this.skyboxProgram.setUniform('uEnvMap', 0);
 
         this.reflectionProgram = ctx.createProgram(res.reflectionVert, res.reflectionFrag);
         ctx.bindProgram(this.reflectionProgram);
-        this.reflectionProgram.setUniform('uReflectionMap', 0);
+        this.reflectionProgram.setUniform('uEnvMap', 0);
 
         this.showColorsProgram = ctx.createProgram(res.showColorsVert, res.showColorsFrag);
 
-        this.reflectionMap = ctx.createTexture2D(res.reflectionMap);
-        this.debugReflectionMap = ctx.createTexture2D(res.debugReflectionMap);
+        this.envMap = ctx.createTexture2D(res.envMap);
+        this.envMapDebug = ctx.createTexture2D(res.testEnvMap);
 
         var skybox = createCube(20);
         var skyboxAttributes = [
@@ -91,10 +91,10 @@ Window.create({
         this.arcball.apply();
         ctx.setViewMatrix(this.camera.getViewMatrix());
 
-        ctx.bindTexture(this.debugMode ? this.debugReflectionMap : this.reflectionMap, 0);
+        ctx.bindTexture(this.debugMode ? this.envMapDebug : this.envMap, 0);
 
-        //move skybox to the camera position
         ctx.pushModelMatrix();
+            //move skybox to the camera position
             ctx.translate(this.camera.getPosition());
             ctx.bindProgram(this.skyboxProgram);
             ctx.bindMesh(this.skyboxMesh);
@@ -106,7 +106,7 @@ Window.create({
         ctx.drawMesh();
 
         ctx.bindProgram(this.showColorsProgram);
-        this.debug.drawPivotAxes(2);
+        this.debugDraw.drawPivotAxes(2);
 
         this.gui.draw();
     }

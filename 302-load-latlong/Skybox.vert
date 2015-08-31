@@ -5,9 +5,9 @@ uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 uniform mat4 uModelMatrix;
 
-varying vec3 vNormal;
+varying vec3 ecNormal;
 
 void main() {
-  vNormal = aPosition.xyz;
+  ecNormal = aPosition.xyz;
   gl_Position = uProjectionMatrix * uViewMatrix * uModelMatrix * aPosition;
 }
