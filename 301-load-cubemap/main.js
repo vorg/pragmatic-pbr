@@ -25,12 +25,12 @@ Window.create({
         skyboxFrag: { glsl: glslify(__dirname + '/Skybox.frag') },
         showColorsVert: { glsl: glslify(__dirname + '/../assets/glsl/ShowColors.vert') },
         showColorsFrag: { glsl: glslify(__dirname + '/../assets/glsl/ShowColors.frag') },
-        lake_px:     { image: ASSETS_DIR + '/envmaps/lake_right.jpg' },
-        lake_nx:     { image: ASSETS_DIR + '/envmaps/lake_left.jpg' },
-        lake_py:     { image: ASSETS_DIR + '/envmaps/lake_top.jpg' },
-        lake_ny:     { image: ASSETS_DIR + '/envmaps/lake_bottom.jpg' },
-        lake_pz:     { image: ASSETS_DIR + '/envmaps/lake_back.jpg' }, //+x is 'back'!
-        lake_nz:     { image: ASSETS_DIR + '/envmaps/lake_front.jpg' },//-z is 'front'!
+        lake_px:     { image: ASSETS_DIR + '/envmaps/pisa_posx.jpg' },
+        lake_nx:     { image: ASSETS_DIR + '/envmaps/pisa_negx.jpg' },
+        lake_py:     { image: ASSETS_DIR + '/envmaps/pisa_posy.jpg' },
+        lake_ny:     { image: ASSETS_DIR + '/envmaps/pisa_negy.jpg' },
+        lake_pz:     { image: ASSETS_DIR + '/envmaps/pisa_posz.jpg' }, //+x is 'back'!
+        lake_nz:     { image: ASSETS_DIR + '/envmaps/pisa_negz.jpg' },//-z is 'front'!
         test_px:     { image: ASSETS_DIR + '/envmaps/test_px.png' },
         test_nx:     { image: ASSETS_DIR + '/envmaps/test_nx.png' },
         test_py:     { image: ASSETS_DIR + '/envmaps/test_py.png' },
