@@ -2,7 +2,7 @@
 precision highp float;
 #endif
 
-#pragma glslify: texture2DEnvLatLong  = require(../local_modules/glsl-texture2d-latlong)
+#pragma glslify: texture2DEnvLatLong  = require(../local_modules/glsl-texture2d-env-latlong)
 
 varying vec3 ecNormal;
 
