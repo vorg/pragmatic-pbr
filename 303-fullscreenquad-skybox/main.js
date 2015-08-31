@@ -28,8 +28,8 @@ Window.create({
         reflectionFrag: { glsl: glslify(__dirname + '/Reflection.frag') },
         showColorsVert: { glsl: glslify(__dirname + '/../assets/glsl/ShowColors.vert') },
         showColorsFrag: { glsl: glslify(__dirname + '/../assets/glsl/ShowColors.frag') },
-        reflectionMap: { image: ASSETS_DIR + '/envmaps/pisa_preview.jpg' },
-        debugReflectionMap: { image: ASSETS_DIR + '/envmaps/test.jpg' }
+        envMap: { image: ASSETS_DIR + '/envmaps/pisa_preview.jpg' },
+        envMapDebug: { image: ASSETS_DIR + '/envmaps/test.jpg' }
     },
     debugMode: false,
     thirdPersonView: true,
@@ -57,26 +57,26 @@ Window.create({
         this.modelMatrix = Mat4.create();
         ctx.setModelMatrix(this.modelMatrix);
 
-        this.debug = new Draw(ctx);
+        this.debugDraw = new Draw(ctx);
 
         var res = this.getResources();
 
         this.skyboxProgram = ctx.createProgram(res.skyboxVert, res.skyboxFrag);
         ctx.bindProgram(this.skyboxProgram);
-        this.skyboxProgram.setUniform('uReflectionMap', 0);
+        this.skyboxProgram.setUniform('uEnvMap', 0);
 
         this.skyboxDebugProgram = ctx.createProgram(res.skyboxDebugVert, res.skyboxFrag);
         ctx.bindProgram(this.skyboxDebugProgram);
-        this.skyboxDebugProgram.setUniform('uReflectionMap', 0);
+        this.skyboxDebugProgram.setUniform('uEnvMap', 0);
 
         this.reflectionProgram = ctx.createProgram(res.reflectionVert, res.reflectionFrag);
         ctx.bindProgram(this.reflectionProgram);
-        this.reflectionProgram.setUniform('uReflectionMap', 0);
+        this.reflectionProgram.setUniform('uEnvMap', 0);
 
         this.showColorsProgram = ctx.createProgram(res.showColorsVert, res.showColorsFrag);
 
-        this.reflectionMap = ctx.createTexture2D(res.reflectionMap, res.reflectionMap.width, res.reflectionMap.height);
-        this.debugReflectionMap = ctx.createTexture2D(res.debugReflectionMap, res.reflectionMap.width, res.reflectionMap.height);
+        this.envMap = ctx.createTexture2D(res.envMap, res.envMap.width, res.envMap.height);
+        this.envMapDebug = ctx.createTexture2D(res.envMapDebug, res.envMapDebug.width, res.envMapDebug.height);
 
         var skyboxPositions = [[-1,-1],[1,-1], [1,1],[-1,1]];
         var skyboxFaces = [ [0, 1, 2], [0, 2, 3]];
@@ -95,7 +95,7 @@ Window.create({
         var sphereIndices = { data: sphere.cells, usage: ctx.STATIC_DRAW };
         this.sphereMesh = ctx.createMesh(attributes, sphereIndices, ctx.TRIANGLES);
     },
-    drawFrustum: function(ctx, debug, camera) {
+    drawFrustum: function(ctx, debugDraw, camera) {
         var camera = this.camera;
         var lines = [];
 
@@ -157,8 +157,8 @@ Window.create({
         lines.push([frustumFarBottomLeft, frustumFarTopLeft]);
 
         ctx.pushModelMatrix();
-            debug.setColor([1,1,1,1]);
-            debug.drawLines(lines);
+            debugDraw.setColor([1,1,1,1]);
+            debugDraw.drawLines(lines);
         ctx.popModelMatrix();
     },
     draw: function() {
@@ -183,7 +183,7 @@ Window.create({
         ctx.clear(ctx.COLOR_BIT | ctx.DEPTH_BIT);
         ctx.setDepthTest(true);
 
-        ctx.bindTexture(this.debugMode ? this.debugReflectionMap : this.reflectionMap, 0);
+        ctx.bindTexture(this.debugMode ? this.envMapDebug : this.envMap, 0);
 
         if (!this.thirdPersonView) {
             ctx.setDepthTest(false);
@@ -213,14 +213,14 @@ Window.create({
         ctx.drawMesh();
 
         ctx.bindProgram(this.showColorsProgram);
-        this.debug.drawPivotAxes(2);
+        this.debugDraw.drawPivotAxes(2);
 
         if (this.thirdPersonView) {
             ctx.pushModelMatrix();
                 ctx.translate(this.camera.getPosition());
-                this.debug.setColor([1, 1, 0, 1]);
-                this.debug.drawCubeStroked(20);
-                this.drawFrustum(ctx, this.debug, this.camera);
+                this.debugDraw.setColor([1, 1, 0, 1]);
+                this.debugDraw.drawCubeStroked(20);
+                this.drawFrustum(ctx, this.debugDraw, this.camera);
             ctx.popModelMatrix();
         }
 
