@@ -4,11 +4,14 @@ precision highp float;
 
 #pragma glslify: texture2DLatLong  = require(../local_modules/glsl-texture2d-latlong)
 
-varying vec3 vNormal;
+varying vec3 wcNormal;
 
 uniform sampler2D uReflectionMap;
 
+float flipEvnMap = -1;
+
 void main() {
-    vec3 N = normalize(vNormal);
+    vec3 N = normalize(wcNormal);
+    N.x *= flipEvnMap;
     gl_FragColor = texture2DLatLong(uReflectionMap, N);
 }
