@@ -25,7 +25,7 @@ Window.create({
         reflectionFrag: { glsl: glslify(__dirname + '/Reflection.frag') },
         showColorsVert: { glsl: glslify(__dirname + '/../assets/glsl/ShowColors.vert') },
         showColorsFrag: { glsl: glslify(__dirname + '/../assets/glsl/ShowColors.frag') },
-        reflectionMap: { image: ASSETS_DIR + '/envmaps/uffizi_preview.jpg' },
+        reflectionMap: { image: ASSETS_DIR + '/envmaps/pisa_preview.jpg' },
         debugReflectionMap: { image: ASSETS_DIR + '/envmaps/test.jpg' }
     },
     debugMode: false,
@@ -36,8 +36,8 @@ Window.create({
         this.addEventListener(this.gui);
         this.gui.addParam('Debug mode', this, 'debugMode');
 
-        this.camera = new PerspCamera(60, this.getAspectRatio(), 0.1, 100);
-        this.camera.lookAt([0, 1, 4], [0, 0, 0], [0, 1, 0]);
+        this.camera = new PerspCamera(45, this.getAspectRatio(), 0.1, 100);
+        this.camera.lookAt([0, 0, -5], [0, 0, 0], [0, 1, 0]);
         this.arcball = new Arcball(this.camera, this.getWidth(), this.getHeight());
         this.addEventListener(this.arcball);
 
@@ -105,10 +105,8 @@ Window.create({
         ctx.bindMesh(this.sphereMesh);
         ctx.drawMesh();
 
-        if (this.debugMode) {
-            ctx.bindProgram(this.showColorsProgram);
-            this.debug.drawPivotAxes(2);
-        }
+        ctx.bindProgram(this.showColorsProgram);
+        this.debug.drawPivotAxes(2);
 
         this.gui.draw();
     }

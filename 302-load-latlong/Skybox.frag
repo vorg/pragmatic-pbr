@@ -8,7 +8,10 @@ varying vec3 vNormal;
 
 uniform sampler2D uReflectionMap;
 
+float flipEnvMap = -1.0;
+
 void main() {
     vec3 N = normalize(vNormal);
+    N.x *= flipEnvMap;
     gl_FragColor = texture2DLatLong(uReflectionMap, N);
 }
