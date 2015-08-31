@@ -2,8 +2,10 @@
 precision highp float;
 #endif
 
+#pragma glslify: textureCubeEnv  = require(../local_modules/glsl-textureCube-env)
+
 uniform mat4 uInverseViewMatrix;
-uniform samplerCube uReflectionMap;
+uniform samplerCube uEnvMap;
 
 varying vec3 ecPosition;
 varying vec3 ecNormal;
@@ -18,7 +20,5 @@ void main() {
     vec3 wcNormal = vec3(uInverseViewMatrix * vec4(ecNormal, 0.0));
 
     vec3 reflectionWorld = reflect(-wcEyeDir, normalize(wcNormal));
-    reflectionWorld.x *= flipEnvMap;
-
-    gl_FragColor = textureCube(uReflectionMap, reflectionWorld);
+    gl_FragColor = textureCubeEnv(uEnvMap, reflectionWorld, flipEnvMap);
 }

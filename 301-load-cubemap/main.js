@@ -25,18 +25,18 @@ Window.create({
         skyboxFrag: { glsl: glslify(__dirname + '/Skybox.frag') },
         showColorsVert: { glsl: glslify(__dirname + '/../assets/glsl/ShowColors.vert') },
         showColorsFrag: { glsl: glslify(__dirname + '/../assets/glsl/ShowColors.frag') },
-        lake_px:     { image: ASSETS_DIR + '/envmaps/pisa_posx.jpg' },
-        lake_nx:     { image: ASSETS_DIR + '/envmaps/pisa_negx.jpg' },
-        lake_py:     { image: ASSETS_DIR + '/envmaps/pisa_posy.jpg' },
-        lake_ny:     { image: ASSETS_DIR + '/envmaps/pisa_negy.jpg' },
-        lake_pz:     { image: ASSETS_DIR + '/envmaps/pisa_posz.jpg' }, //+x is 'back'!
-        lake_nz:     { image: ASSETS_DIR + '/envmaps/pisa_negz.jpg' },//-z is 'front'!
-        test_px:     { image: ASSETS_DIR + '/envmaps/test_px.png' },
-        test_nx:     { image: ASSETS_DIR + '/envmaps/test_nx.png' },
-        test_py:     { image: ASSETS_DIR + '/envmaps/test_py.png' },
-        test_ny:     { image: ASSETS_DIR + '/envmaps/test_ny.png' },
-        test_pz:     { image: ASSETS_DIR + '/envmaps/test_pz.png' },
-        test_nz:     { image: ASSETS_DIR + '/envmaps/test_nz.png' }
+        envMap_px: { image: ASSETS_DIR + '/envmaps/pisa_posx.jpg' },
+        envMap_nx: { image: ASSETS_DIR + '/envmaps/pisa_negx.jpg' },
+        envMap_py: { image: ASSETS_DIR + '/envmaps/pisa_posy.jpg' },
+        envMap_ny: { image: ASSETS_DIR + '/envmaps/pisa_negy.jpg' },
+        envMap_pz: { image: ASSETS_DIR + '/envmaps/pisa_posz.jpg' },
+        envMap_nz: { image: ASSETS_DIR + '/envmaps/pisa_negz.jpg' },
+        test_px: { image: ASSETS_DIR + '/envmaps/test_px.png' },
+        test_nx: { image: ASSETS_DIR + '/envmaps/test_nx.png' },
+        test_py: { image: ASSETS_DIR + '/envmaps/test_py.png' },
+        test_ny: { image: ASSETS_DIR + '/envmaps/test_ny.png' },
+        test_pz: { image: ASSETS_DIR + '/envmaps/test_pz.png' },
+        test_nz: { image: ASSETS_DIR + '/envmaps/test_nz.png' }
     },
     debugMode: false,
     thirdPersonView: false,
@@ -64,7 +64,7 @@ Window.create({
         this.modelMatrix = Mat4.create();
         ctx.setModelMatrix(this.modelMatrix);
 
-        this.debug = new Draw(ctx);
+        this.debugDraw = new Draw(ctx);
 
         var res = this.getResources();
 
@@ -87,16 +87,16 @@ Window.create({
             ctx.TRIANGLES
         );
 
-        this.reflectionMap = ctx.createTextureCube([
-            { face: 0, data: res.lake_px },
-            { face: 1, data: res.lake_nx },
-            { face: 2, data: res.lake_py },
-            { face: 3, data: res.lake_ny },
-            { face: 4, data: res.lake_pz },
-            { face: 5, data: res.lake_nz }
+        this.envMap = ctx.createTextureCube([
+            { face: 0, data: res.envMap_px },
+            { face: 1, data: res.envMap_nx },
+            { face: 2, data: res.envMap_py },
+            { face: 3, data: res.envMap_ny },
+            { face: 4, data: res.envMap_pz },
+            { face: 5, data: res.envMap_nz }
         ])
 
-        this.debugReflectionMap = ctx.createTextureCube([
+        this.envMapDebug = ctx.createTextureCube([
             { face: 0, data: res.test_px },
             { face: 1, data: res.test_nx },
             { face: 2, data: res.test_py },
@@ -105,7 +105,7 @@ Window.create({
             { face: 5, data: res.test_nz }
         ])
     },
-    drawFrustum: function(ctx, debug, camera) {
+    drawFrustum: function(ctx, debugDraw, camera) {
         var camera = this.camera;
         var lines = [];
 
@@ -160,8 +160,8 @@ Window.create({
         lines.push([frustumFarBottomLeft, frustumFarTopLeft]);
 
         ctx.pushModelMatrix();
-            debug.setColor([1,1,1,1]);
-            debug.drawLines(lines);
+            debugDraw.setColor([1,1,1,1]);
+            debugDraw.drawLines(lines);
         ctx.popModelMatrix();
     },
     draw: function() {
@@ -185,11 +185,11 @@ Window.create({
         ctx.setClearColor(0.2, 0.2, 0.2, 1);
         ctx.clear(ctx.COLOR_BIT | ctx.DEPTH_BIT);
 
-        ctx.bindTexture(this.debugMode ? this.debugReflectionMap : this.reflectionMap, 0);
+        ctx.bindTexture(this.debugMode ? this.envMapDebug : this.envMap, 0);
 
         ctx.setDepthTest(false);
         ctx.bindProgram(this.skyboxProgram);
-        this.skyboxProgram.setUniform('uReflectionMap', 0);
+        this.skyboxProgram.setUniform('uEnvMap', 0);
         ctx.setCullFace(true);
         ctx.setCullFaceMode(ctx.FRONT);
         ctx.pushModelMatrix();
@@ -201,19 +201,19 @@ Window.create({
 
         ctx.setDepthTest(true);
         ctx.bindProgram(this.reflectionProgram);
-        this.reflectionProgram.setUniform('uReflectionMap', 0);
+        this.reflectionProgram.setUniform('uEnvMap', 0);
         ctx.bindMesh(this.mesh);
         ctx.drawMesh();
 
         ctx.bindProgram(this.showColorsProgram);
-        this.debug.drawPivotAxes(2);
+        this.debugDraw.drawPivotAxes(2);
 
         if (this.thirdPersonView) {
             ctx.pushModelMatrix();
                 ctx.translate(this.camera.getPosition());
-                this.debug.setColor([1, 1, 0, 1]);
-                this.debug.drawCubeStroked(20);
-                this.drawFrustum(ctx, this.debug, this.camera);
+                this.debugDraw.setColor([1, 1, 0, 1]);
+                this.debugDraw.drawCubeStroked(20);
+                this.drawFrustum(ctx, this.debugDraw, this.camera);
             ctx.popModelMatrix();
         }
 
