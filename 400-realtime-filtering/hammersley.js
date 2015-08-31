@@ -10,14 +10,6 @@ function radicalInverse_VdC(i) {
     return bits[0] * 2.3283064365386963e-10; // / 0x100000000 or / 4294967296
 }
 
-function radicalInverse_VdC2(a) {
-    a = (a<<16 | a>>>16)>>>0;
-    a = ((a & 1431655765)<<1 | (a & 2863311530)>>>1)>>>0;
-    a = ((a & 858993459)<<2 | (a & 3435973836)>>>2)>>>0;
-    a = ((a & 252645135)<<4 | (a & 4042322160)>>>4)>>>0;
-    return (((a & 16711935)<<8 | (a & 4278255360)>>>8)>>>0) / 4294967296
-}
-
 function hammersley(i, n) {
     return [i/n, radicalInverse_VdC(i)];
 }
