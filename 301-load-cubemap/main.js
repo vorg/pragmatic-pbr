@@ -160,7 +160,6 @@ Window.create({
         lines.push([frustumFarBottomLeft, frustumFarTopLeft]);
 
         ctx.pushModelMatrix();
-            ctx.translate(position);
             debug.setColor([1,1,1,1]);
             debug.drawLines(lines);
         ctx.popModelMatrix();
@@ -206,10 +205,8 @@ Window.create({
         ctx.bindMesh(this.mesh);
         ctx.drawMesh();
 
-        if (this.debugMode || this.thirdPersonView) {
-            ctx.bindProgram(this.showColorsProgram);
-            this.debug.drawPivotAxes(2);
-        }
+        ctx.bindProgram(this.showColorsProgram);
+        this.debug.drawPivotAxes(2);
 
         if (this.thirdPersonView) {
             ctx.pushModelMatrix();
