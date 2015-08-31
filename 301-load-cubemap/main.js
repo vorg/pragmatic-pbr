@@ -48,13 +48,13 @@ Window.create({
         this.gui.addParam('Debug mode', this, 'debugMode');
         this.gui.addParam('Third person view', this, 'thirdPersonView');
 
-        this.camera = new PerspCamera(45, this.getAspectRatio(), 0.1, 20);
-        this.camera.lookAt([0, 1, 4], [0, 0, 0], [0, 1, 0]);
+        this.camera = new PerspCamera(45, this.getAspectRatio(), 0.1, 100);
+        this.camera.lookAt([0, 0, -5], [0, 0, 0], [0, 1, 0]);
         this.arcball = new Arcball(this.camera, this.getWidth(), this.getHeight());
         this.addEventListener(this.arcball);
 
         this.thirdPersonCamera = new PerspCamera(45, this.getAspectRatio(), 0.1, 250);
-        this.thirdPersonCamera.lookAt([0, 0, 35], [0, 0, 0], [0, 1, 0]);
+        this.thirdPersonCamera.lookAt([0, 0, -35], [0, 0, 0], [0, 1, 0]);
         this.thirdPersonArcball = new Arcball(this.thirdPersonCamera, this.getWidth(), this.getHeight());
         this.addEventListener(this.thirdPersonArcball);
 
