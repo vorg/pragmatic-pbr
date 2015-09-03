@@ -8,6 +8,7 @@ precision highp float;
 
 uniform mat4 uInverseViewMatrix;
 uniform sampler2D uEnvMap;
+uniform bool uCorrectGamma;
 
 varying vec3 ecPosition;
 varying vec3 ecNormal;
@@ -21,7 +22,10 @@ void main() {
 
     vec3 reflectionWorld = reflect(-wcEyeDir, normalize(wcNormal));
 
-    gl_FragColor.rgb = rgbe2rgb(texture2DEnvLatLong(uEnvMap, reflectionWorld, flipEnvMap));
-    gl_FragColor.rgb = toGamma(gl_FragColor.rgb);
+    //gl_FragColor.rgb = rgbe2rgb(texture2DEnvLatLong(uEnvMap, reflectionWorld, flipEnvMap));
+    gl_FragColor.rgb = texture2DEnvLatLong(uEnvMap, reflectionWorld, flipEnvMap).rgb;
+    if (uCorrectGamma) {
+        gl_FragColor.rgb = toGamma(gl_FragColor.rgb);
+    }
     gl_FragColor.a = 1.0;
 }

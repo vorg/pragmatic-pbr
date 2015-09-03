@@ -21,8 +21,13 @@ Window.create({
         reflectionFrag: { glsl: glslify(__dirname + '/Reflection.frag') },
         envMap: { binary: __dirname + '/../assets/envmaps/pisa_latlong_256.hdr' }
     },
+    gamma: false,
     init: function() {
         var ctx = this.getContext();
+
+        this.gui = new GUI(ctx, this.getWidth(), this.getHeight());
+        this.gui.addParam('Gamma', this, 'gamma');
+        this.addEventListener(this.gui);
 
         this.camera = new PerspCamera(45, this.getAspectRatio(), 0.1, 50);
         this.camera.lookAt([0, 0, -5], [0, 0, 0], [0, 1, 0]);
@@ -40,7 +45,16 @@ Window.create({
         this.reflectionProgram.setUniform('uSkybox', 0);
 
         var hdrInfo = parseHdr(res.envMap);
-        this.envMap = ctx.createTexture2D(hdrInfo.data, hdrInfo.width, hdrInfo.height, { type: ctx.UNSIGNED_BYTE });
+        this.envMap = ctx.createTexture2D(hdrInfo.data, hdrInfo.shape[0], hdrInfo.shape[1], {
+            type: ctx.UNSIGNED_BYTE,
+            magFilter: ctx.NEAREST,
+            minFilter: ctx.NEAREST
+        });
+
+        var hdrInfo = parseHdr(res.envMap, { float: true });
+        this.envMap = ctx.createTexture2D(hdrInfo.data, hdrInfo.shape[0], hdrInfo.shape[1], {
+            type: ctx.FLOAT
+        });
 
         var cube = createCube(20);
         this.skyboxMesh = ctx.createMesh(
@@ -69,7 +83,8 @@ Window.create({
 
         ctx.bindTexture(this.envMap, 0);
         ctx.bindProgram(this.reflectionProgram);
-        this.reflectionProgram.setUniform('uSkybox', 1);
+        this.reflectionProgram.setUniform('uCorrectGamma', this.gamma);
+        this.reflectionProgram.setUniform('uSkybox', true);
 
         ctx.setDepthTest(false);
         ctx.setCullFaceMode(ctx.FRONT);
@@ -79,11 +94,13 @@ Window.create({
             ctx.drawMesh();
         ctx.popModelMatrix();
 
-        this.reflectionProgram.setUniform('uSkybox', 0);
+        this.reflectionProgram.setUniform('uSkybox', false);
         ctx.setDepthTest(true);
         ctx.setCullFaceMode(ctx.BACK);
 
         ctx.bindMesh(this.sphereMesh);
         ctx.drawMesh();
+
+        this.gui.draw();
     }
 })
