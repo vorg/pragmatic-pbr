@@ -61,9 +61,6 @@ Window.create({
         ctx.setProjectionMatrix(this.camera.getProjectionMatrix());
         ctx.setViewMatrix(this.camera.getViewMatrix());
 
-        this.modelMatrix = Mat4.create();
-        ctx.setModelMatrix(this.modelMatrix);
-
         this.debugDraw = new Draw(ctx);
 
         var res = this.getResources();
