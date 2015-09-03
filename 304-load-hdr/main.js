@@ -7,6 +7,8 @@ var createCube   = require('primitive-cube');
 var parseHdr     = require('../local_modules/parse-hdr');
 var isBrowser    = require('is-browser');
 var GUI          = require('pex-gui');
+var PerspCamera  = require('pex-cam/PerspCamera');
+var Arcball      = require('pex-cam/Arcball');
 
 Window.create({
     settings: {
@@ -15,47 +17,36 @@ Window.create({
         fullscreen: isBrowser
     },
     resources: {
-        skyboxVert: { glsl: glslify(__dirname + '/SkyboxQuad.vert') },
-        skyboxFrag: { glsl: glslify(__dirname + '/SkyboxQuad.frag') },
         reflectionVert: { glsl: glslify(__dirname + '/Reflection.vert') },
         reflectionFrag: { glsl: glslify(__dirname + '/Reflection.frag') },
-        reflectionMap: { binary: __dirname + '/../assets/envmaps/uffizi.hdr' }
+        envMap: { binary: __dirname + '/../assets/envmaps/pisa_latlong_256.hdr' }
     },
     init: function() {
         var ctx = this.getContext();
 
-        this.model = Mat4.create();
-        this.projection = Mat4.perspective(Mat4.create(), 60, this.getAspectRatio(), 0.001, 100.0);
-        this.cameraPos = [3, -1, 2];
-        this.view = Mat4.lookAt([], this.cameraPos, [0, 0, 0], [0, 1, 0]);
-        this.invView = Mat4.create();
-        Mat4.set(this.invView, this.view);
-        Mat4.invert(this.invView);
+        this.camera = new PerspCamera(45, this.getAspectRatio(), 0.1, 50);
+        this.camera.lookAt([0, 0, -5], [0, 0, 0], [0, 1, 0]);
+        this.arcball = new Arcball(this.camera, this.getWidth(), this.getHeight());
+        this.addEventListener(this.arcball);
 
-        ctx.setProjectionMatrix(this.projection);
-        ctx.setViewMatrix(this.view);
-        ctx.setModelMatrix(this.model);
+        ctx.setProjectionMatrix(this.camera.getProjectionMatrix());
+        ctx.setViewMatrix(this.camera.getViewMatrix());
 
         var res = this.getResources();
 
-        this.skyboxProgram = ctx.createProgram(res.skyboxVert, res.skyboxFrag);
-        ctx.bindProgram(this.skyboxProgram);
-        this.skyboxProgram.setUniform('uReflectionMap', 0);
-
         this.reflectionProgram = ctx.createProgram(res.reflectionVert, res.reflectionFrag);
         ctx.bindProgram(this.reflectionProgram);
-        this.reflectionProgram.setUniform('uReflectionMap', 0);
+        this.reflectionProgram.setUniform('uEnvMap', 0);
 
-        var hdrInfo = parseHdr(res.reflectionMap);
-        this.reflectionMap = ctx.createTexture2D(hdrInfo.data, hdrInfo.width, hdrInfo.height, { type: ctx.UNSIGNED_BYTE });
+        var hdrInfo = parseHdr(res.envMap);
+        this.envMap = ctx.createTexture2D(hdrInfo.data, hdrInfo.width, hdrInfo.height, { type: ctx.UNSIGNED_BYTE });
 
-        var skyboxPositions = [[-1,-1],[1,-1], [1,1],[-1,1]];
-        var skyboxFaces = [ [0, 1, 2], [0, 2, 3]];
-        var skyboxAttributes = [
-            { data: skyboxPositions, location: ctx.ATTRIB_POSITION },
-        ];
-        var skyboxIndices = { data: skyboxFaces };
-        this.skyboxMesh = ctx.createMesh(skyboxAttributes, skyboxIndices);
+        var cube = createCube(20);
+        this.skyboxMesh = ctx.createMesh(
+            [ { data: cube.positions, location: ctx.ATTRIB_POSITION }],
+            { data: cube.cells },
+            ctx.TRIANGLES
+        );
 
         var sphere = createSphere();
         var attributes = [
@@ -70,23 +61,26 @@ Window.create({
         var ctx = this.getContext();
         ctx.setClearColor(0.2, 0.2, 0.2, 1);
         ctx.clear(ctx.COLOR_BIT | ctx.DEPTH_BIT);
-        ctx.setDepthTest(true);
+        ctx.setCullFace(true);
 
-        ctx.setViewMatrix(this.view);
+        this.arcball.apply();
+        ctx.setViewMatrix(this.camera.getViewMatrix());
 
-        ctx.bindTexture(this.reflectionMap, 0);
+        ctx.bindTexture(this.envMap, 0);
+        ctx.bindProgram(this.reflectionProgram);
 
         ctx.setDepthTest(false);
-        ctx.bindProgram(this.skyboxProgram);
-        ctx.bindMesh(this.skyboxMesh);
-        ctx.drawMesh();
+        ctx.setCullFaceMode(ctx.FRONT);
+        ctx.pushModelMatrix();
+            ctx.translate(this.camera.getPosition());
+            ctx.bindMesh(this.skyboxMesh);
+            ctx.drawMesh();
+        ctx.popModelMatrix();
 
         ctx.setDepthTest(true);
-        ctx.bindProgram(this.reflectionProgram);
-        this.reflectionProgram.setUniform('uInvViewMatrix', this.invView);
+        ctx.setCullFaceMode(ctx.BACK);
+
         ctx.bindMesh(this.sphereMesh);
         ctx.drawMesh();
-
-
     }
 })
