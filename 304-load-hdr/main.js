@@ -17,6 +17,8 @@ Window.create({
         fullscreen: isBrowser
     },
     resources: {
+        skyboxVert: { glsl: glslify(__dirname + '/SkyboxQuad.vert') },
+        skyboxFrag: { glsl: glslify(__dirname + '/SkyboxQuad.frag') },
         reflectionVert: { glsl: glslify(__dirname + '/Reflection.vert') },
         reflectionFrag: { glsl: glslify(__dirname + '/Reflection.frag') },
         envMap: { binary: __dirname + '/../assets/envmaps/pisa_latlong_256.hdr' }
@@ -39,22 +41,26 @@ Window.create({
 
         var res = this.getResources();
 
+        this.skyboxProgram = ctx.createProgram(res.skyboxVert, res.skyboxFrag);
+        ctx.bindProgram(this.skyboxProgram);
+        this.skyboxProgram.setUniform('uEnvMap', 0);
+
         this.reflectionProgram = ctx.createProgram(res.reflectionVert, res.reflectionFrag);
         ctx.bindProgram(this.reflectionProgram);
         this.reflectionProgram.setUniform('uEnvMap', 0);
-        this.reflectionProgram.setUniform('uSkybox', 0);
 
         var hdrInfo = parseHdr(res.envMap, { float: true });
         this.envMap = ctx.createTexture2D(hdrInfo.data, hdrInfo.shape[0], hdrInfo.shape[1], {
             type: ctx.FLOAT
         });
 
-        var cube = createCube(20);
-        this.skyboxMesh = ctx.createMesh(
-            [ { data: cube.positions, location: ctx.ATTRIB_POSITION }],
-            { data: cube.cells },
-            ctx.TRIANGLES
-        );
+        var skyboxPositions = [[-1,-1],[1,-1], [1,1],[-1,1]];
+        var skyboxFaces = [ [0, 1, 2], [0, 2, 3]];
+        var skyboxAttributes = [
+            { data: skyboxPositions, location: ctx.ATTRIB_POSITION },
+        ];
+        var skyboxIndices = { data: skyboxFaces };
+        this.skyboxMesh = ctx.createMesh(skyboxAttributes, skyboxIndices);
 
         var sphere = createSphere();
         var attributes = [
@@ -75,19 +81,15 @@ Window.create({
         ctx.setViewMatrix(this.camera.getViewMatrix());
 
         ctx.bindTexture(this.envMap, 0);
-        ctx.bindProgram(this.reflectionProgram);
-        this.reflectionProgram.setUniform('uCorrectGamma', this.gamma);
-        this.reflectionProgram.setUniform('uSkybox', true);
+        ctx.bindProgram(this.skyboxProgram);
+        this.skyboxProgram.setUniform('uCorrectGamma', this.gamma);
 
         ctx.setDepthTest(false);
-        ctx.setCullFaceMode(ctx.FRONT);
-        ctx.pushModelMatrix();
-            ctx.translate(this.camera.getPosition());
-            ctx.bindMesh(this.skyboxMesh);
-            ctx.drawMesh();
-        ctx.popModelMatrix();
+        ctx.bindMesh(this.skyboxMesh);
+        ctx.drawMesh();
 
-        this.reflectionProgram.setUniform('uSkybox', false);
+        ctx.bindProgram(this.reflectionProgram);
+        this.reflectionProgram.setUniform('uCorrectGamma', this.gamma);
         ctx.setDepthTest(true);
         ctx.setCullFaceMode(ctx.BACK);
 
