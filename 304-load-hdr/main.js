@@ -37,6 +37,7 @@ Window.create({
         this.reflectionProgram = ctx.createProgram(res.reflectionVert, res.reflectionFrag);
         ctx.bindProgram(this.reflectionProgram);
         this.reflectionProgram.setUniform('uEnvMap', 0);
+        this.reflectionProgram.setUniform('uSkybox', 0);
 
         var hdrInfo = parseHdr(res.envMap);
         this.envMap = ctx.createTexture2D(hdrInfo.data, hdrInfo.width, hdrInfo.height, { type: ctx.UNSIGNED_BYTE });
@@ -68,6 +69,7 @@ Window.create({
 
         ctx.bindTexture(this.envMap, 0);
         ctx.bindProgram(this.reflectionProgram);
+        this.reflectionProgram.setUniform('uSkybox', 1);
 
         ctx.setDepthTest(false);
         ctx.setCullFaceMode(ctx.FRONT);
@@ -77,6 +79,7 @@ Window.create({
             ctx.drawMesh();
         ctx.popModelMatrix();
 
+        this.reflectionProgram.setUniform('uSkybox', 0);
         ctx.setDepthTest(true);
         ctx.setCullFaceMode(ctx.BACK);
 

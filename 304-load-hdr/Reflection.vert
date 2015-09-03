@@ -6,11 +6,19 @@ uniform mat4 uViewMatrix;
 uniform mat4 uModelMatrix;
 uniform mat3 uNormalMatrix;
 
+uniform float uSkybox;
+
 varying vec3 ecPosition;
 varying vec3 ecNormal;
 
 void main() {
     gl_Position = uProjectionMatrix * uViewMatrix * uModelMatrix * aPosition;
     ecPosition = vec3(uViewMatrix * uModelMatrix * aPosition);
-    ecNormal = uNormalMatrix * aNormal;
+
+    if (uSkybox > 0.0) {
+        ecNormal = vec3(0.0);
+    }
+    else {
+        ecNormal = uNormalMatrix * aNormal;
+    }
 }
