@@ -44,13 +44,6 @@ Window.create({
         this.reflectionProgram.setUniform('uEnvMap', 0);
         this.reflectionProgram.setUniform('uSkybox', 0);
 
-        var hdrInfo = parseHdr(res.envMap);
-        this.envMap = ctx.createTexture2D(hdrInfo.data, hdrInfo.shape[0], hdrInfo.shape[1], {
-            type: ctx.UNSIGNED_BYTE,
-            magFilter: ctx.NEAREST,
-            minFilter: ctx.NEAREST
-        });
-
         var hdrInfo = parseHdr(res.envMap, { float: true });
         this.envMap = ctx.createTexture2D(hdrInfo.data, hdrInfo.shape[0], hdrInfo.shape[1], {
             type: ctx.FLOAT
