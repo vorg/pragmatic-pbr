@@ -182,8 +182,7 @@ function parseHdr(buffer) {
   readPixelsRawRLE(buffer, data, 0, fileOffset, scanline_width, num_scanlines);
 
   return {
-    width: width,
-    height: height,
+    shape: [width, height],
     exposure: exposure,
     gamma: gamma,
     data: data
