@@ -6,6 +6,10 @@ This blog post is a part of series about implementing PBR in WebGL from scratch:
 1. [Intro](http://marcinignac.com/blog/pragmatic-pbr-intro)
 2. [Setup & Gamma](http://marcinignac.com/blog/pragmatic-pbr-setup-and-gamma)
 
+### Updates
+
+**2015/09/03** Removed gamma correction for input param colors and assuming they are in the linear space already
+
 ## Setup
 
 Before we start let's make sure we can get the code up and running properly. I will assume you have working knowledge of JavaScript and GLSL.
@@ -473,9 +477,9 @@ We will call these brighter color values **gamma space** and the unadjusted valu
 To sum up:
 
 ```javascript
-gamma space     //input colors
+gamma space     //input colors (if from sRGB texture otherwise linear)
      ↓
-pow(x, 2.2)
+pow(x, 2.2)     //(if from sRGB texture otherwise do nothing)
      ↓
 linear space    //do the lighting and blending math here
      ↓
@@ -507,19 +511,20 @@ The vertex shader for is the same as for lambert diffuse. In the fragment shader
 ```
 
 Now we can use them to obtain the correct color values to work with.
+As the colors come from the code we will assume they are in the linear space. This will change when we use textures later.
 
 ```glsl
     //surface and light color, full white
-    vec4 baseColor = toLinear(vec4(1.0));   //NEW
-    vec4 lightColor = toLinear(vec4(1.0));  //NEW
+    //no need to call toLinear(color) here
+    //as the colors don't come from a texture
+    vec4 baseColor = vec4(1.0);
+    vec4 lightColor = vec4(1.0);
 
 	 //lighting in the linear space
     vec4 finalColor = vec4(baseColor.rgb * lightColor.rgb * Id, 1.0);
     gl_FragColor = toGamma(finalColor);     //NEW
 }
 ```
-
-Note: using `toLinear(vec4(1.0))` won't change much because `pow(1, 2.2)` is still `1` but this will become super important when we work with different colors and textures data.
 
 Here is how `toLinear` and `toGamma` are implemented:
 
@@ -589,7 +594,7 @@ Try turning on/off the conversion to linear and gamma space to see the differenc
 [![](img/205.jpg)](http://marcinignac.com/blog/pragmatic-pbr-setup-and-gamma/205-gamma-texture/)
 [click to see the live version in a separate window](http://marcinignac.com/blog/pragmatic-pbr-setup-and-gamma/205-gamma-texture/)
 
-Remember when I was talking about sRGB curves and textures? When using texture colors we need to bring them to the linear space as well:
+Remember when I was talking about sRGB curves and textures? When using texture with sRGB encoded colors we need to bring them to the linear space:
 
 ```glsl
 vec4 baseColor = toLinear(texture2D(uAlbedoTex, vTexCoord0));
