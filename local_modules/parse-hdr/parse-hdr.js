@@ -121,7 +121,7 @@ function readPixelsRawRLE(buffer, data, offset, fileOffset, scanline_width, num_
 
 }
 
-function parseHdr(buffer) {
+function parseHdr(buffer, options) {
     if (buffer instanceof ArrayBuffer) {
         buffer = new Uint8Array(buffer);
     }
@@ -181,11 +181,33 @@ function parseHdr(buffer) {
 
   readPixelsRawRLE(buffer, data, 0, fileOffset, scanline_width, num_scanlines);
 
+  var floatData = null;
+  if (options && options.float) {
+      //TODO: Should be Float16
+      floatData = new Float32Array(width * height * 4);
+      for(var offset=0; offset<data.length; offset += 4) {
+          var r = data[offset+0]/255;
+          var g = data[offset+1]/255;
+          var b = data[offset+2]/255;
+          var e = data[offset+3];
+          var f = Math.pow(2.0, e - 128.0)
+
+          r *= f;
+          g *= f;
+          b *= f;
+
+          floatData[offset+0] = r;
+          floatData[offset+1] = g;
+          floatData[offset+2] = b;
+          floatData[offset+3] = 1.0;
+      }
+  }
+
   return {
     shape: [width, height],
     exposure: exposure,
     gamma: gamma,
-    data: data
+    data: floatData || data
   }
 }
 
