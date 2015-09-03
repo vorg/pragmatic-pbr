@@ -9,6 +9,7 @@ precision highp float;
 uniform mat4 uInverseViewMatrix;
 uniform sampler2D uEnvMap;
 uniform bool uCorrectGamma;
+uniform bool uSkybox;
 
 varying vec3 ecPosition;
 varying vec3 ecNormal;
@@ -20,10 +21,10 @@ void main() {
     vec3 wcEyeDir = vec3(uInverseViewMatrix * vec4(ecEyeDir, 0.0));
     vec3 wcNormal = vec3(uInverseViewMatrix * vec4(ecNormal, 0.0));
 
-    vec3 reflectionWorld = reflect(-wcEyeDir, normalize(wcNormal));
+    vec3 reflectionWorld = uSkybox ? -wcEyeDir : reflect(-wcEyeDir, normalize(wcNormal));
 
-    //gl_FragColor.rgb = rgbe2rgb(texture2DEnvLatLong(uEnvMap, reflectionWorld, flipEnvMap));
     gl_FragColor.rgb = texture2DEnvLatLong(uEnvMap, reflectionWorld, flipEnvMap).rgb;
+    
     if (uCorrectGamma) {
         gl_FragColor.rgb = toGamma(gl_FragColor.rgb);
     }
