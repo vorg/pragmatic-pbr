@@ -3,7 +3,6 @@ var Mat4         = require('pex-math/Mat4');
 var Vec3         = require('pex-math/Vec3');
 var glslify      = require('glslify-promise');
 var createSphere = require('primitive-sphere');
-var createCube   = require('primitive-cube');
 var parseHdr     = require('../local_modules/parse-hdr');
 var isBrowser    = require('is-browser');
 var GUI          = require('pex-gui');
@@ -75,7 +74,6 @@ Window.create({
         var ctx = this.getContext();
         ctx.setClearColor(0.2, 0.2, 0.2, 1);
         ctx.clear(ctx.COLOR_BIT | ctx.DEPTH_BIT);
-        ctx.setCullFace(true);
 
         this.arcball.apply();
         ctx.setViewMatrix(this.camera.getViewMatrix());
@@ -91,7 +89,6 @@ Window.create({
         ctx.bindProgram(this.reflectionProgram);
         this.reflectionProgram.setUniform('uCorrectGamma', this.gamma);
         ctx.setDepthTest(true);
-        ctx.setCullFaceMode(ctx.BACK);
 
         ctx.bindMesh(this.sphereMesh);
         ctx.drawMesh();
