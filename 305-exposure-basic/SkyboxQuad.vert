@@ -8,13 +8,13 @@ attribute vec4 aPosition;
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 
-varying vec3 vNormal;
+varying vec3 wcNormal;
 
 void main() {
     mat4 inverseProjection = inverse(uProjectionMatrix);
     mat3 inverseModelview = transpose(mat3(uViewMatrix));
     vec3 unprojected = (inverseProjection * aPosition).xyz;
-    vNormal = inverseModelview * unprojected;
+    wcNormal = inverseModelview * unprojected;
 
     gl_Position = aPosition;
 }

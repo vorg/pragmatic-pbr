@@ -1,12 +1,13 @@
 var Window       = require('pex-sys/Window');
 var Mat4         = require('pex-math/Mat4');
 var Vec3         = require('pex-math/Vec3');
-var MathUtils    = require('pex-math/Utils');
 var glslify      = require('glslify-promise');
 var createSphere = require('primitive-sphere');
-var createCube   = require('primitive-cube');
 var parseHdr     = require('../local_modules/parse-hdr');
 var isBrowser    = require('is-browser');
+var GUI          = require('pex-gui');
+var PerspCamera  = require('pex-cam/PerspCamera');
+var Arcball      = require('pex-cam/Arcball');
 
 Window.create({
     settings: {
@@ -19,49 +20,47 @@ Window.create({
         skyboxFrag: { glsl: glslify(__dirname + '/SkyboxQuad.frag') },
         reflectionVert: { glsl: glslify(__dirname + '/Reflection.vert') },
         reflectionFrag: { glsl: glslify(__dirname + '/Reflection.frag') },
-        reflectionMap: { binary: __dirname + '/../assets/envmaps/uffizi.hdr' }
+        envMap: { binary: __dirname + '/../assets/envmaps/pisa_latlong_256.hdr' }
     },
-    exposure: 1,
     gamma: true,
-    onMouseMove: function(e) {
-        var w = this.getWidth();
-        if (e.x < w/2) {
-            this.exposure = MathUtils.clamp(MathUtils.map(e.x, 0, w/2, 0, 1), 0, 1);
-        }
-        else {
-            this.exposure = MathUtils.clamp(MathUtils.map(e.x, w/2, w, 1, 3), 0, 3);
-        }
-    },
+    exposure: 1,
     init: function() {
         var ctx = this.getContext();
 
-        this.model = Mat4.create();
-        this.projection = Mat4.perspective(Mat4.create(), 60, this.getAspectRatio(), 0.001, 100.0);
-        this.cameraPos = [3, -1, 2];
-        this.view = Mat4.lookAt([], this.cameraPos, [0, 0, 0], [0, 1, 0]);
-        this.invView = Mat4.create();
-        Mat4.set(this.invView, this.view);
-        Mat4.invert(this.invView);
+        this.gui = new GUI(ctx, this.getWidth(), this.getHeight());
+        this.gui.addParam('Gamma', this, 'gamma');
+        this.gui.addParam('Exposure', this, 'exposure', { min: 0, max: 3 });
+        this.addEventListener(this.gui);
 
-        ctx.setProjectionMatrix(this.projection);
-        ctx.setViewMatrix(this.view);
-        ctx.setModelMatrix(this.model);
+        this.camera = new PerspCamera(45, this.getAspectRatio(), 0.1, 50);
+        this.camera.lookAt([0, 0, -5], [0, 0, 0], [0, 1, 0]);
+        this.arcball = new Arcball(this.camera, this.getWidth(), this.getHeight());
+        this.addEventListener(this.arcball);
+
+        ctx.setProjectionMatrix(this.camera.getProjectionMatrix());
+        ctx.setViewMatrix(this.camera.getViewMatrix());
 
         var res = this.getResources();
 
         this.skyboxProgram = ctx.createProgram(res.skyboxVert, res.skyboxFrag);
         ctx.bindProgram(this.skyboxProgram);
-        this.skyboxProgram.setUniform('uReflectionMap', 0);
-        this.skyboxProgram.setUniform('uExposure', this.exposure);
-
+        this.skyboxProgram.setUniform('uEnvMap', 0);
 
         this.reflectionProgram = ctx.createProgram(res.reflectionVert, res.reflectionFrag);
         ctx.bindProgram(this.reflectionProgram);
-        this.reflectionProgram.setUniform('uReflectionMap', 0);
-        this.reflectionProgram.setUniform('uExposure', this.exposure);
+        this.reflectionProgram.setUniform('uEnvMap', 0);
 
-        var hdrInfo = parseHdr(res.reflectionMap);
-        this.reflectionMap = ctx.createTexture2D(hdrInfo.data, hdrInfo.width, hdrInfo.height, { type: ctx.UNSIGNED_BYTE });
+        var hdrInfo = parseHdr(res.envMap);
+        this.envMap = ctx.createTexture2D(hdrInfo.data, hdrInfo.shape[0], hdrInfo.shape[1], {
+            type: ctx.UNSIGNED_BYTE,
+            magFilter: ctx.NEAREST,
+            minFilter: ctx.NEAREST
+        });
+
+        var hdrInfo = parseHdr(res.envMap, { float: true });
+        this.envMap = ctx.createTexture2D(hdrInfo.data, hdrInfo.shape[0], hdrInfo.shape[1], {
+            type: ctx.FLOAT
+        });
 
         var skyboxPositions = [[-1,-1],[1,-1], [1,1],[-1,1]];
         var skyboxFaces = [ [0, 1, 2], [0, 2, 3]];
@@ -84,26 +83,28 @@ Window.create({
         var ctx = this.getContext();
         ctx.setClearColor(0.2, 0.2, 0.2, 1);
         ctx.clear(ctx.COLOR_BIT | ctx.DEPTH_BIT);
-        ctx.setDepthTest(true);
 
-        ctx.setViewMatrix(this.view);
+        this.arcball.apply();
+        ctx.setViewMatrix(this.camera.getViewMatrix());
 
-        ctx.bindTexture(this.reflectionMap, 0);
+        ctx.bindTexture(this.envMap, 0);
 
-        //move skybox to the camera position
-        ctx.setDepthTest(false);
         ctx.bindProgram(this.skyboxProgram);
+        this.skyboxProgram.setUniform('uCorrectGamma', this.gamma);
         this.skyboxProgram.setUniform('uExposure', this.exposure);
+
+        ctx.setDepthTest(false);
         ctx.bindMesh(this.skyboxMesh);
         ctx.drawMesh();
 
-        ctx.setDepthTest(true);
         ctx.bindProgram(this.reflectionProgram);
-        this.reflectionProgram.setUniform('uInvViewMatrix', this.invView);
+        this.reflectionProgram.setUniform('uCorrectGamma', this.gamma);
         this.reflectionProgram.setUniform('uExposure', this.exposure);
+        ctx.setDepthTest(true);
+
         ctx.bindMesh(this.sphereMesh);
         ctx.drawMesh();
 
-
+        this.gui.draw();
     }
 })
