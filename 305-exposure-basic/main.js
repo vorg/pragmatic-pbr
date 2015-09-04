@@ -9,6 +9,8 @@ var GUI          = require('pex-gui');
 var PerspCamera  = require('pex-cam/PerspCamera');
 var Arcball      = require('pex-cam/Arcball');
 
+var ASSETS_DIR = isBrowser ? '../assets' :  __dirname + '/../assets';
+
 Window.create({
     settings: {
         width: 1024,
@@ -20,7 +22,7 @@ Window.create({
         skyboxFrag: { glsl: glslify(__dirname + '/SkyboxQuad.frag') },
         reflectionVert: { glsl: glslify(__dirname + '/Reflection.vert') },
         reflectionFrag: { glsl: glslify(__dirname + '/Reflection.frag') },
-        envMap: { binary: __dirname + '/../assets/envmaps/pisa_latlong_256.hdr' }
+        envMap: { binary: ASSETS_DIR + '/envmaps/pisa_latlong_256.hdr' }
     },
     gamma: true,
     exposure: 1,
