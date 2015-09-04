@@ -5,7 +5,6 @@ var Mat4         = require('pex-math/Mat4');
 var Vec3         = require('pex-math/Vec3');
 var glslify      = require('glslify-promise');
 var createSphere = require('primitive-sphere');
-var createCube   = require('primitive-cube');
 var PerspCamera  = require('pex-cam/PerspCamera');
 var Arcball      = require('pex-cam/Arcball');
 var Draw         = require('pex-draw');
