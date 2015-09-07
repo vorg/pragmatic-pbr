@@ -56,7 +56,7 @@ Window.create({
         ctx.setProjectionMatrix(this.camera.getProjectionMatrix());
 
         this.arcball = new Arcball(this.camera, this.getWidth(), this.getHeight());
-        this.addEventListener(this.arcball);
+        //this.addEventListener(this.arcball);
 
         var res = this.getResources();
 
@@ -95,6 +95,33 @@ Window.create({
         ];
         var sphereIndices = { data: sphere.cells, usage: ctx.STATIC_DRAW };
         this.sphereMesh = ctx.createMesh(attributes, sphereIndices, ctx.TRIANGLES);
+    },
+    mousePosToQuadViewport: function(e) {
+        var sw = this.sidebarWidth;
+        var w = this.getWidth();
+        var aw = w - sw;
+        var h = this.getHeight();
+        var ah = h;
+        e.x -= sw;
+        if (e.x > aw/2) e.x -= aw/2;
+        if (e.y > ah/2) e.y -= ah/2;
+
+        e.x *= 2;
+        e.y *= 2;
+        
+        return e;
+    },
+    onMouseDown: function(e) {
+        if (e.x < this.sidebarWidth) return;
+        this.arcball.onMouseDown(this.mousePosToQuadViewport(e));
+    },
+    onMouseMove: function(e) {
+        if (e.x < this.sidebarWidth) return;
+        this.arcball.onMouseMove(this.mousePosToQuadViewport(e));
+    },
+    onMouseDrag: function(e) {
+        if (e.x < this.sidebarWidth) return;
+        this.arcball.onMouseDrag(this.mousePosToQuadViewport(e));
     },
     drawScene: function(tonemappingMethod) {
         var ctx = this.getContext();
