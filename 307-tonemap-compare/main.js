@@ -31,6 +31,7 @@ Window.create({
         filmLut: { image: ASSETS_DIR + '/textures/FilmLut.png' }
     },
     exposure: 1,
+    sidebarWidth: 200,
     onMouseMove: function(e) {
         var w = this.getWidth();
         if (e.x < w/2) {
@@ -54,25 +55,12 @@ Window.create({
         this.gui.addHeader('Uncharted + Gamma').setPosition(w/2 + 10, h/2 + 10);
 
         this.camera  = new PerspCamera(45,this.getAspectRatio(),0.001,20.0);
-        this.camera.lookAt([2, 1, 2], [0, 0, 0]);
+        this.camera.lookAt([0, 0, -5], [0, 0, 0]);
 
         ctx.setProjectionMatrix(this.camera.getProjectionMatrix());
 
         this.arcball = new Arcball(this.camera, this.getWidth(), this.getHeight());
-        this.arcball.setDistance(3.0);
         this.addEventListener(this.arcball);
-
-        this.model = Mat4.create();
-        this.projection = Mat4.perspective(Mat4.create(), 60, this.getAspectRatio(), 0.001, 100.0);
-        this.cameraPos = [3, -1, 2];
-        this.view = Mat4.lookAt([], this.cameraPos, [0, 0, 0], [0, 1, 0]);
-        this.invView = Mat4.create();
-        Mat4.set(this.invView, this.view);
-        Mat4.invert(this.invView);
-
-        ctx.setProjectionMatrix(this.projection);
-        ctx.setViewMatrix(this.view);
-        ctx.setModelMatrix(this.model);
 
         var res = this.getResources();
 
@@ -136,8 +124,6 @@ Window.create({
         ctx.setClearColor(0.2, 0.2, 0.2, 1);
         ctx.clear(ctx.COLOR_BIT | ctx.DEPTH_BIT);
         ctx.setDepthTest(true);
-
-        ctx.setViewMatrix(this.view);
 
         this.arcball.apply();
         ctx.setViewMatrix(this.camera.getViewMatrix());
