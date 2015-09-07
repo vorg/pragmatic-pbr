@@ -2,20 +2,21 @@
 precision highp float;
 #endif
 
-#pragma glslify: texture2DLatLong  = require(../local_modules/glsl-texture2d-latlong)
-#pragma glslify: rgbe2rgb  = require(../local_modules/glsl-rgbe2rgb)
+#pragma glslify: texture2DEnvLatLong  = require(../local_modules/glsl-texture2d-env-latlong)
 #pragma glslify: toGamma  = require(glsl-gamma/out)
 #pragma glslify: tonemapReinhard  = require(../local_modules/glsl-tonemap-reinhard)
 #pragma glslify: tonemapFilmic  = require(../local_modules/glsl-tonemap-filmic)
 #pragma glslify: tonemapUncharted2  = require(../local_modules/glsl-tonemap-uncharted2)
 
-varying vec3 vNormal;
+varying vec3 wcNormal;
 
-uniform sampler2D uReflectionMap;
+uniform sampler2D uEnvMap;
 uniform float uExposure;
 uniform float uTonemappingMethod;
 
 uniform sampler2D uFilmLut;
+
+float flipEnvMap = -1.0;
 
 float LOG10 = log(10.0);
 
@@ -48,8 +49,8 @@ vec3 Uncharted2Tonemap(vec3 x) {
 }
 
 void main() {
-    vec3 N = normalize(vNormal);
-    gl_FragColor.rgb = rgbe2rgb(texture2DLatLong(uReflectionMap, N));
+    vec3 N = normalize(wcNormal);
+    gl_FragColor.rgb = texture2DEnvLatLong(uEnvMap, N, flipEnvMap).rgb;
     gl_FragColor.rgb *= uExposure;
 
     if (uTonemappingMethod == 0.0) {

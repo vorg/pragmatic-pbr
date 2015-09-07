@@ -27,8 +27,7 @@ Window.create({
         reflectionFrag: { glsl: glslify(__dirname + '/Reflection.frag') },
         showColorsVert: { glsl: glslify(__dirname + '/../assets/glsl/ShowColors.vert') },
         showColorsFrag: { glsl: glslify(__dirname + '/../assets/glsl/ShowColors.frag') },
-        reflectionMap: { binary: ASSETS_DIR + '/envmaps/pisa_256.hdr' },
-        reflectionMap2: { binary: ASSETS_DIR + '/envmaps/grace-new-128.hdr' },
+        reflectionMap: { binary: ASSETS_DIR + '/envmaps/pisa_latlong_256.hdr' },
         filmLut: { image: ASSETS_DIR + '/textures/FilmLut.png' }
     },
     exposure: 1,
@@ -79,13 +78,13 @@ Window.create({
 
         this.skyboxProgram = ctx.createProgram(res.skyboxVert, res.skyboxFrag);
         ctx.bindProgram(this.skyboxProgram);
-        this.skyboxProgram.setUniform('uReflectionMap', 0);
+        this.skyboxProgram.setUniform('uEnvMap', 0);
         this.skyboxProgram.setUniform('uFilmLut', 1);
         this.skyboxProgram.setUniform('uExposure', this.exposure);
 
         this.reflectionProgram = ctx.createProgram(res.reflectionVert, res.reflectionFrag);
         ctx.bindProgram(this.reflectionProgram);
-        this.reflectionProgram.setUniform('uReflectionMap', 0);
+        this.reflectionProgram.setUniform('uEnvMap', 0);
         this.reflectionProgram.setUniform('uFilmLut', 1);
         this.reflectionProgram.setUniform('uExposure', this.exposure);
 
@@ -93,8 +92,8 @@ Window.create({
 
         this.filmLutTexture = ctx.createTexture2D(res.filmLut);
 
-        var hdrInfo = parseHdr(res.reflectionMap);
-        this.reflectionMap = ctx.createTexture2D(hdrInfo.data, hdrInfo.width, hdrInfo.height, { type: ctx.UNSIGNED_BYTE });
+        var hdrInfo = parseHdr(res.reflectionMap, { float: true });
+        this.reflectionMap = ctx.createTexture2D(hdrInfo.data, hdrInfo.shape[0], hdrInfo.shape[1], { type: ctx.FLOAT });
 
         var skyboxPositions = [[-1,-1],[1,-1], [1,1],[-1,1]];
         var skyboxFaces = [ [0, 1, 2], [0, 2, 3]];
