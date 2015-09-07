@@ -40,13 +40,14 @@ Window.create({
         var w = this.getWidth();
         var h = this.getHeight();
         var sw = this.sidebarWidth;
+        var aw = w - sw;
 
         this.gui = new GUI(ctx, w, h);
         this.gui.addParam('Exposure', this, 'exposure', { min:0, max: 3 })
         this.gui.addHeader('Gamma').setPosition(sw + 10, 10);
-        this.gui.addHeader('Reinhard + Gamma').setPosition(sw + w/2 + 10, 10);
+        this.gui.addHeader('Reinhard + Gamma').setPosition(sw + aw/2 + 10, 10);
         this.gui.addHeader('Filmic').setPosition(sw + 10, h/2 + 10);
-        this.gui.addHeader('Uncharted + Gamma').setPosition(sw + w/2 + 10, h/2 + 10);
+        this.gui.addHeader('Uncharted2 + Gamma').setPosition(sw + aw/2 + 10, h/2 + 10);
         this.addEventListener(this.gui);
 
         var aspectRatio = (w - sw)/h;
@@ -108,7 +109,7 @@ Window.create({
 
         e.x *= 2;
         e.y *= 2;
-        
+
         return e;
     },
     onMouseDown: function(e) {
