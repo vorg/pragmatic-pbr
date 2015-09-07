@@ -31,16 +31,7 @@ Window.create({
         filmLut: { image: ASSETS_DIR + '/textures/FilmLut.png' }
     },
     exposure: 1,
-    sidebarWidth: 200,
-    onMouseMove: function(e) {
-        var w = this.getWidth();
-        if (e.x < w/2) {
-            this.exposure = MathUtils.clamp(MathUtils.map(e.x, 0, w/2, 0, 1), 0, 1);
-        }
-        else {
-            this.exposure = MathUtils.clamp(MathUtils.map(e.x, w/2, w, 1, 5), 0, 5);
-        }
-    },
+    sidebarWidth: 190,
     init: function() {
         var ctx = this.getContext();
 
@@ -48,13 +39,18 @@ Window.create({
 
         var w = this.getWidth();
         var h = this.getHeight();
-        this.gui = new GUI(ctx, w, h);
-        this.gui.addHeader('Gamma').setPosition(10, 10);
-        this.gui.addHeader('Reinhard + Gamma').setPosition(w/2 + 10, 10);
-        this.gui.addHeader('Filmic').setPosition(10, h/2 + 10);
-        this.gui.addHeader('Uncharted + Gamma').setPosition(w/2 + 10, h/2 + 10);
+        var sw = this.sidebarWidth;
 
-        this.camera  = new PerspCamera(45,this.getAspectRatio(),0.001,20.0);
+        this.gui = new GUI(ctx, w, h);
+        this.gui.addParam('Exposure', this, 'exposure', { min:0, max: 3 })
+        this.gui.addHeader('Gamma').setPosition(sw + 10, 10);
+        this.gui.addHeader('Reinhard + Gamma').setPosition(sw + w/2 + 10, 10);
+        this.gui.addHeader('Filmic').setPosition(sw + 10, h/2 + 10);
+        this.gui.addHeader('Uncharted + Gamma').setPosition(sw + w/2 + 10, h/2 + 10);
+        this.addEventListener(this.gui);
+
+        var aspectRatio = (w - sw)/h;
+        this.camera  = new PerspCamera(45, aspectRatio,0.001,20.0);
         this.camera.lookAt([0, 0, -5], [0, 0, 0]);
 
         ctx.setProjectionMatrix(this.camera.getProjectionMatrix());
@@ -131,20 +127,22 @@ Window.create({
         ctx.bindTexture(this.reflectionMap, 0);
         ctx.bindTexture(this.filmLutTexture, 1);
 
+        var sw = this.sidebarWidth;
         var w = this.getWidth();
+        var aw = w - sw;
         var h = this.getHeight();
 
         //Viewport origin is at bottom left
-        ctx.setViewport(0, h/2, w/2, h/2);
+        ctx.setViewport(sw, h/2, aw/2, h/2);
         this.drawScene(0);
 
-        ctx.setViewport(w/2, h/2, w/2, h/2);
+        ctx.setViewport(sw + aw/2, h/2, aw/2, h/2);
         this.drawScene(1);
 
-        ctx.setViewport(0, 0, w/2, h/2);
+        ctx.setViewport(sw, 0, aw/2, h/2);
         this.drawScene(2);
 
-        ctx.setViewport(w/2, 0, w/2, h/2);
+        ctx.setViewport(sw + aw/2, 0, aw/2, h/2);
         this.drawScene(3);
 
         ctx.setViewport(0, 0, w, h);
