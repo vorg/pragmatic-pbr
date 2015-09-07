@@ -2,13 +2,12 @@
 precision highp float;
 #endif
 
-#pragma glslify: texture2DLatLong  = require(../local_modules/glsl-texture2d-latlong)
-#pragma glslify: rgbe2rgb  = require(../local_modules/glsl-rgbe2rgb)
+#pragma glslify: texture2DEnvLatLong  = require(../local_modules/glsl-texture2d-env-latlong)
 #pragma glslify: toGamma  = require(glsl-gamma/out)
 #pragma glslify: tonemapReinhard  = require(../local_modules/glsl-tonemap-reinhard)
 
 uniform mat4 uInverseViewMatrix;
-uniform sampler2D uReflectionMap;
+uniform sampler2D uEnvMap;
 uniform float uAperture;
 uniform float uShutterSpeed;
 uniform float uIso;
@@ -16,6 +15,8 @@ uniform float uMiddleGrey;
 
 varying vec3 ecPosition;
 varying vec3 ecNormal;
+
+float flipEnvMap = -1.0;
 
 //White balance middle grey we are targetting for a good scene exposure
 //https://en.wikipedia.org/wiki/Middle_gray
@@ -43,9 +44,9 @@ void main() {
 
     vec3 reflectionWorld = reflect(-wcEyeDir, normalize(wcNormal));
 
-    //gl_FragColor.rgb = rgbe2rgb(texture2DLatLong(uReflectionMap, reflectionWorld));
+    //gl_FragColor.rgb = rgbe2rgb(texture2DEnvLatLong(uEnvMap, reflectionWorld));
     //gl_FragColor.rgb *= log(uExposure);
-    gl_FragColor.rgb = rgbe2rgb(texture2DLatLong(uReflectionMap, reflectionWorld));
+    gl_FragColor.rgb = texture2DEnvLatLong(uEnvMap, reflectionWorld, flipEnvMap).rgb;
     gl_FragColor.rgb *= getStandardOutputBasedExposure(uAperture, uShutterSpeed, uIso);
     //gl_FragColor.rgb *= getStandardOutputBasedExposure(16, uExposure, 100.0, 0.18);
     gl_FragColor.rgb = tonemapReinhard(gl_FragColor.rgb);

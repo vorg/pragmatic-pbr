@@ -24,7 +24,7 @@ Window.create({
         skyboxFrag: { glsl: glslify(__dirname + '/SkyboxQuad.frag') },
         reflectionVert: { glsl: glslify(__dirname + '/Reflection.vert') },
         reflectionFrag: { glsl: glslify(__dirname + '/Reflection.frag') },
-        reflectionMap: { binary: ASSETS_DIR + '/envmaps/grace-new-128.hdr' }
+        envMap: { binary: ASSETS_DIR + '/envmaps/pisa_latlong_256.hdr' }
     },
     aperture: 16,
     shutterSpeed: 0.5,
@@ -43,8 +43,8 @@ Window.create({
         this.gui.addParam('ISO', this, 'iso', { min: 100, max: 1600 });
         this.gui.addParam('Middle grey', this, 'middleGrey', { min: 0, max: 1 });
 
-        this.camera = new PerspCamera(60, this.getAspectRatio(), 0.1, 100);
-        this.camera.lookAt([0, 1, 4], [0, 0, 0], [0, 1, 0]);
+        this.camera = new PerspCamera(45, this.getAspectRatio(), 0.1, 100);
+        this.camera.lookAt([0, 0, -5], [0, 0, 0], [0, 1, 0]);
         this.arcball = new Arcball(this.camera, this.getWidth(), this.getHeight());
         this.addEventListener(this.arcball);
 
@@ -58,7 +58,7 @@ Window.create({
 
         this.skyboxProgram = ctx.createProgram(res.skyboxVert, res.skyboxFrag);
         ctx.bindProgram(this.skyboxProgram);
-        this.skyboxProgram.setUniform('uReflectionMap', 0);
+        this.skyboxProgram.setUniform('uEnvMap', 0);
         this.skyboxProgram.setUniform('uAperture', this.aperture);
         this.skyboxProgram.setUniform('uShutterSpeed', this.shutterSpeed);
         this.skyboxProgram.setUniform('uIso', this.iso);
@@ -66,13 +66,13 @@ Window.create({
 
         this.reflectionProgram = ctx.createProgram(res.reflectionVert, res.reflectionFrag);
         ctx.bindProgram(this.reflectionProgram);
-        this.reflectionProgram.setUniform('uReflectionMap', 0);
+        this.reflectionProgram.setUniform('uEnvMap', 0);
         this.reflectionProgram.setUniform('uAperture', this.aperture);
         this.reflectionProgram.setUniform('uShutterSpeed', this.shutterSpeed);
         this.reflectionProgram.setUniform('uIso', this.iso);
 
-        var hdrInfo = parseHdr(res.reflectionMap);
-        this.reflectionMap = ctx.createTexture2D(hdrInfo.data, hdrInfo.width, hdrInfo.height, { type: ctx.UNSIGNED_BYTE });
+        var hdrInfo = parseHdr(res.envMap, { float: true });
+        this.envMap = ctx.createTexture2D(hdrInfo.data, hdrInfo.shape[0], hdrInfo.shape[1], { type: ctx.FLOAT });
 
         var skyboxPositions = [[-1,-1],[1,-1], [1,1],[-1,1]];
         var skyboxFaces = [ [0, 1, 2], [0, 2, 3]];
@@ -100,7 +100,7 @@ Window.create({
         this.arcball.apply();
         ctx.setViewMatrix(this.camera.getViewMatrix());
 
-        ctx.bindTexture(this.reflectionMap, 0);
+        ctx.bindTexture(this.envMap, 0);
 
         //move skybox to the camera position
         ctx.setDepthTest(false);
