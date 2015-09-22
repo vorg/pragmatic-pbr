@@ -9,7 +9,8 @@ This blog post is a part of series about implementing PBR in WebGL from scratch:
 ### Updates
 
 **2015/09/03** Removed gamma correction for input param colors and assuming they are in the linear space already
-**2015/09/22** Reversed back to gamma input colors based on the discussion here https://github.com/mrdoob/three.js/issues/5838
+
+**2015/09/22** Reversed back to gamma input colors based on the discussion here [https://github.com/mrdoob/three.js/issues/5838](https://github.com/mrdoob/three.js/issues/5838)
 
 ## Setup
 
