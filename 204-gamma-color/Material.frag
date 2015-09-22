@@ -31,8 +31,8 @@ void main() {
     float diffuse1 = lambert(L1, N);
     float diffuse2 = lambert(L2, N);
 
-    vec3 lightColor1 = uLightColor1.rgb;
-    vec3 lightColor2 = uLightColor2.rgb;
+    vec3 lightColor1 = uLinearSpace ? toLinear(uLightColor1.rgb) : uLightColor1.rgb;
+    vec3 lightColor2 = uLinearSpace ? toLinear(uLightColor2.rgb) : uLightColor2.rgb;
 
     //albedo
     vec4 baseColor = uLinearSpace ? toLinear(vec4(1.0)) : vec4(1.0);
