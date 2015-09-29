@@ -1,10 +1,13 @@
 ![](img/200.jpg)
-## Pragmatic PBR - Setup & Gamma
+
+# Pragmatic PBR - Setup and Gamma
 
 This blog post is a part of series about implementing PBR in WebGL from scratch:
 
 1. [Intro](http://marcinignac.com/blog/pragmatic-pbr-intro)
-2. [Setup & Gamma](http://marcinignac.com/blog/pragmatic-pbr-setup-and-gamma)
+2. **[Setup & Gamma](http://marcinignac.com/blog/pragmatic-pbr-setup-and-gamma)**
+2. [HDR](http://marcinignac.com/blog/pragmatic-pbr-hdr)
+
 
 ### Updates
 
