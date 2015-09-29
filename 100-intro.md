@@ -1,6 +1,6 @@
 ![](img/100_exploded_cube.jpg)
 
-## Pragmatic PBR - Intro
+# Pragmatic PBR - Intro
 
 This blog post is a part of series about implementing PBR in WebGL from scratch:
 
