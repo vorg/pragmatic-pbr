@@ -1,6 +1,14 @@
-![](img/exploded_cube.jpg)
+![](img/100_exploded_cube.jpg)
 
-## What is Physically Based Rendering (PBR)?
+## Pragmatic PBR - Intro
+
+This blog post is a part of series about implementing PBR in WebGL from scratch:
+
+1. **[Intro](http://marcinignac.com/blog/pragmatic-pbr-intro)**
+2. [Setup & Gamma](http://marcinignac.com/blog/pragmatic-pbr-setup-and-gamma)
+2. [HDR](http://marcinignac.com/blog/pragmatic-pbr-hdr)
+
+### What is Physically Based Rendering (PBR)?
 
 PBR is a set of techniques aiming at improving realism of rendered graphics by
 using more physically correct formulas on how surfaces interact with light. Sometimes, especially in the realtime context it's called Physically Based Shading - PBS.
@@ -11,11 +19,11 @@ you might know from OpenGL 1.0/2.0 era and first WebGL 1.0 engines, PBR brings *
 
 **Unified shader** being able to express wide range of materials from ceramics, wood and iron to sci-fi aluminum, chrome and plastic.
 
-![](img/materials3x2.jpg)
+![](img/100_materials3x2.jpg)
 
 **Predicable look** under different lighting conditions.
 
-![](img/bunny_env3.jpg)
+![](img/100_bunny_env3.jpg)
 
 ### Parameters
 
@@ -23,17 +31,17 @@ We will cover this in more details in the future but in PBR we divide our materi
 
 **Dielectrics / insulators** (from plastic to rubber) - medium to very low reflectivity, base color due to reflected diffuse light
 
-![](img/dielectric_roughness_sml.jpg)
+![](img/100_dielectric_roughness_sml.jpg)
 
 **Metals / conductors** (from silver to brushed aluminium) - highly reflective, no base color as they absorb the light, optional tint (e.g. gold)
 
-![](img/metal_roughness_sml.jpg)
+![](img/100_metal_roughness_sml.jpg)
 
 ### PBR frame breakdown
 
 Albedo, direct light diffuse, fresnel, diffuse reflection, specular reflection, final composition. More on this in the future as not everything here is 100% correct (e.g. I'm not completely sure about Fresnel)
 
-![](img/frame_stages.jpg)
+![](img/100_frame_stages.jpg)
 
 ## Demos
 
@@ -47,15 +55,15 @@ WARNING:
 
 [**Materials**](http://marcinignac.com/blog/pragmatic-pbr-intro/materials/) (Click for the realtime version)
 
-[![](img/demo_materials.jpg)](http://marcinignac.com/blog/pragmatic-pbr-intro/materials/)
+[![](img/100_demo_materials.jpg)](http://marcinignac.com/blog/pragmatic-pbr-intro/materials/)
 
 [**Material mixing**](http://marcinignac.com/blog/pragmatic-pbr-intro/mixing/) (Click for the realtime version)
 
-[![](img/demo_mixing.jpg)](http://marcinignac.com/blog/pragmatic-pbr-intro/mixing/)
+[![](img/100_demo_mixing.jpg)](http://marcinignac.com/blog/pragmatic-pbr-intro/mixing/)
 
 [**Exposure**](http://marcinignac.com/blog/pragmatic-pbr-intro/exposure/) (Click for the realtime version)
 
-[![](img/demo_exposure.jpg)](http://marcinignac.com/blog/pragmatic-pbr-intro/exposure/)
+[![](img/100_demo_exposure.jpg)](http://marcinignac.com/blog/pragmatic-pbr-intro/exposure/)
 
 
 ## Can I haz code?
