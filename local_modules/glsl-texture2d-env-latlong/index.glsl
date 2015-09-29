@@ -11,9 +11,9 @@
  * @description Based on http://http.developer.nvidia.com/GPUGems/gpugems_ch17.html and http://gl.ict.usc.edu/Data/HighResProbes/
  */
 vec4 texture2DEnvLatLong(sampler2D envMap, vec3 wcNormal, float flipEnvMap) {
-    float theta = acos(wcNormal.y);
-    float phi = atan(flipEnvMap * wcNormal.x, wcNormal.z) + PI;
-    vec2 texCoord = vec2(phi / TwoPI, theta / PI);
+    float phi = acos(wcNormal.y);
+    float theta = atan(flipEnvMap * wcNormal.x, wcNormal.z) + PI;
+    vec2 texCoord = vec2(theta / TwoPI, phi / PI);
     return texture2D(envMap, texCoord);
 }
 
