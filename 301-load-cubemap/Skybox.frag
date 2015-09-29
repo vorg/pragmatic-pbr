@@ -11,5 +11,5 @@ uniform samplerCube uEnvMap;
 float flipEnvMap = -1.0;
 
 void main() {
-    gl_FragColor = textureCube(uEnvMap, normalize(wcNormal), flipEnvMap);
+    gl_FragColor = textureCubeEnv(uEnvMap, normalize(wcNormal), flipEnvMap);
 }
