@@ -2,14 +2,12 @@
 precision highp float;
 #endif
 
-#pragma glslify: textureCubeEnv  = require(../local_modules/glsl-textureCube-env)
+#pragma glslify: envMapCube  = require(../local_modules/glsl-envmap-cube)
 
 varying vec3 wcNormal;
 
 uniform samplerCube uEnvMap;
 
-float flipEnvMap = -1.0;
-
 void main() {
-    gl_FragColor = textureCubeEnv(uEnvMap, normalize(wcNormal), flipEnvMap);
+    gl_FragColor = textureCube(uEnvMap, envMapCube(normalize(wcNormal)));
 }
