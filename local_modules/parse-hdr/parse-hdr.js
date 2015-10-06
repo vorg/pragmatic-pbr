@@ -121,94 +121,102 @@ function readPixelsRawRLE(buffer, data, offset, fileOffset, scanline_width, num_
 
 }
 
+//Returns data as floats and flipped along Y by default
 function parseHdr(buffer, options) {
+    var flipY = (options && options.flipY !== undefined) ? options.flipY : true;
+
     if (buffer instanceof ArrayBuffer) {
         buffer = new Uint8Array(buffer);
     }
 
+    var fileOffset = 0;
+    var bufferLength = buffer.length;
 
-  var fileOffset = 0;
-  var bufferLength = buffer.length;
+    var NEW_LINE = 10;
 
-  var NEW_LINE = 10;
-
-  function readLine() {
-    var buf = "";
-    do {
-      var b = buffer[fileOffset];
-      if (b == NEW_LINE) {
-        ++fileOffset
-        break;
-      }
-      buf += String.fromCharCode(b);
-    } while(++fileOffset < bufferLength);
-    return buf;
-  }
-
-  var width = 0;
-  var height = 0;
-  var exposure = 1;
-  var gamma = 1;
-  var rle = false;
-
-  for(var i=0; i<20; i++) {
-    var line = readLine();
-    var match;
-    if (match = line.match(radiancePattern)) {
+    function readLine() {
+        var buf = "";
+        do {
+            var b = buffer[fileOffset];
+            if (b == NEW_LINE) {
+                ++fileOffset
+                break;
+            }
+            buf += String.fromCharCode(b);
+        } while(++fileOffset < bufferLength);
+        return buf;
     }
-    else if (match = line.match(formatPattern)) {
-      rle = true;
+
+    var width = 0;
+    var height = 0;
+    var exposure = 1;
+    var gamma = 1;
+    var rle = false;
+
+    for(var i=0; i<20; i++) {
+        var line = readLine();
+        var match;
+        if (match = line.match(radiancePattern)) {
+        }
+        else if (match = line.match(formatPattern)) {
+            rle = true;
+        }
+        else if (match = line.match(exposurePattern)) {
+            exposure = Number(match[1]);
+        }
+        else if (match = line.match(commentPattern)) {
+        }
+        else if (match = line.match(widthHeightPattern)) {
+            height = Number(match[1]);
+            width = Number(match[2]);
+            break;
+        }
     }
-    else if (match = line.match(exposurePattern)) {
-      exposure = Number(match[1]);
+
+    if (!rle) {
+        throw new Error("File is not run length encoded!");
     }
-    else if (match = line.match(commentPattern)) {
+
+    var data = new Uint8Array(width * height * 4);
+    var scanline_width = width;
+    var num_scanlines = height;
+
+    readPixelsRawRLE(buffer, data, 0, fileOffset, scanline_width, num_scanlines);
+
+    //TODO: Should be Float16
+    var floatData = new Float32Array(width * height * 4);
+    for(var offset=0; offset<data.length; offset += 4) {
+        var r = data[offset+0]/255;
+        var g = data[offset+1]/255;
+        var b = data[offset+2]/255;
+        var e = data[offset+3];
+        var f = Math.pow(2.0, e - 128.0)
+
+        r *= f;
+        g *= f;
+        b *= f;
+
+        var floatOffset = offset;
+
+        if (flipY) {
+            var x = (offset / 4) % width;
+            var y = ((offset / 4) / width) | 0;
+
+            floatOffset = (x + (height - 1 - y) * width) * 4;
+        }
+
+        floatData[floatOffset+0] = r;
+        floatData[floatOffset+1] = g;
+        floatData[floatOffset+2] = b;
+        floatData[floatOffset+3] = 1.0;
     }
-    else if (match = line.match(widthHeightPattern)) {
-      height = Number(match[1]);
-      width = Number(match[2]);
-      break;
+
+    return {
+        shape: [width, height],
+        exposure: exposure,
+        gamma: gamma,
+        data: floatData
     }
-  }
-
-  if (!rle) {
-    throw new Error("File is not run length encoded!");
-  }
-
-  var data = new Uint8Array(width * height * 4);
-  var scanline_width = width;
-  var num_scanlines = height;
-
-  readPixelsRawRLE(buffer, data, 0, fileOffset, scanline_width, num_scanlines);
-
-  var floatData = null;
-  if (options && options.float) {
-      //TODO: Should be Float16
-      floatData = new Float32Array(width * height * 4);
-      for(var offset=0; offset<data.length; offset += 4) {
-          var r = data[offset+0]/255;
-          var g = data[offset+1]/255;
-          var b = data[offset+2]/255;
-          var e = data[offset+3];
-          var f = Math.pow(2.0, e - 128.0)
-
-          r *= f;
-          g *= f;
-          b *= f;
-
-          floatData[offset+0] = r;
-          floatData[offset+1] = g;
-          floatData[offset+2] = b;
-          floatData[offset+3] = 1.0;
-      }
-  }
-
-  return {
-    shape: [width, height],
-    exposure: exposure,
-    gamma: gamma,
-    data: floatData || data
-  }
 }
 
 module.exports = parseHdr;
