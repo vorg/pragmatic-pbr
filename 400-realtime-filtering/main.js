@@ -1,11 +1,15 @@
 var Window       = require('pex-sys/Window');
 var Mat4         = require('pex-math/Mat4');
 var Vec3         = require('pex-math/Vec3');
+var AABB         = require('pex-geom/AABB');
 var MathUtils    = require('pex-math/Utils');
 var glslify      = require('glslify-promise');
 var createSphere = require('primitive-sphere');
 var createCube   = require('primitive-cube');
 var parseHdr     = require('../local_modules/parse-hdr');
+var parseObj     = require('../local_modules/geom-parse-obj');
+var computeNormals = require('../local_modules/geom-compute-normals');
+var triangulate = require('../local_modules/geom-triangulate');
 var remap        = require('re-map');
 var isBrowser    = require('is-browser');
 var PerspCamera  = require('pex-cam/PerspCamera');
@@ -161,10 +165,17 @@ Window.create({
         //envMapImg_ny:  { image: ASSETS_DIR + '/envmaps/bridge_negy.jpg' },
         //envMapImg_pz:  { image: ASSETS_DIR + '/envmaps/bridge_posz.jpg' },
         //envMapImg_nz:  { image: ASSETS_DIR + '/envmaps/bridge_negz.jpg' },
-        pisa:          { binary: ASSETS_DIR + '/envmaps/temp/pisa_cubemap_32f.dds'}
+        pisa:          { binary: ASSETS_DIR + '/envmaps/temp/pisa_cubemap_32f.dds'},
+        //sofa: { text: ASSETS_DIR + '/models/temp/Sofa_seat.obj'}
+        sofa: { text: ASSETS_DIR + '/models/temp/penguin_subdiv.obj'}
     },
     roughness: 0.41,
     exposure: 1,
+    sunPosition: [0, 5, -5],
+    elevation: 0,
+    azimuth: 90,
+    elevationMat: Mat4.create(),
+    rotationMat: Mat4.create(),
     init: function() {
         var ctx = this.getContext();
 
@@ -172,6 +183,8 @@ Window.create({
         this.addEventListener(this.gui);
         this.gui.addParam('roughness', this, 'roughness');
         this.gui.addParam('exposure', this, 'exposure', { min: 0, max: 3});
+        this.gui.addParam('elevation', this, 'elevation', { min: 0, max: 180}, this.updateSunPosition.bind(this));
+        this.gui.addParam('azimuth', this, 'azimuth', { min: 0, max: 360}, this.updateSunPosition.bind(this));
 
         this.camera = new PerspCamera(60, this.getAspectRatio(), 0.1, 100);
         this.camera.lookAt([-4, 1, 0], [0, 0, 0], [0, 1, 0]);
@@ -202,7 +215,7 @@ Window.create({
         this.debugDraw = new Draw(ctx);
         this.showColorsProgram = ctx.createProgram(res.showColorsVert, res.showColorsFrag);
 
-        var numSamples = 1024;
+        var numSamples = 512;
         var hammersleyPointSet = new Float32Array(4 * numSamples);
         for(var i=0; i<numSamples; i++) {
             var p = hammersley(i, numSamples)
@@ -273,6 +286,44 @@ Window.create({
         ];
         var sphereIndices = { data: sphere.cells, usage: ctx.STATIC_DRAW };
         this.sphereMesh = ctx.createMesh(attributes, sphereIndices, ctx.TRIANGLES);
+
+        this.meshes = [];
+        var groups = parseObj(res.sofa);
+        groups = groups.length ? groups : [ groups ];
+        groups.forEach(function(g) {
+            g.cells = triangulate(g.cells);
+            if (!g.positions.length) return;
+            if (!g.normals) {
+                g.normals = computeNormals(g);
+                console.log(g.normals.slice(0, 10))
+                //g.normals = g.positions;
+            }
+            var attributes = [
+                { data: g.positions, location: ctx.ATTRIB_POSITION },
+                { data: g.normals, location: ctx.ATTRIB_NORMAL },
+                //{ data: g.uvs, location: ctx.ATTRIB_TEX_COORD_0 },
+            ];
+            var rot = Mat4.createFromRotation(-Math.PI/2, [1, 0, 0]);
+                g.positions.forEach(function(p) {
+                if (!p.visited) {
+                    Vec3.scale(p, 3);
+                    p.visited = true;
+                    //Vec3.multMat4(p, rot);
+                }
+            })
+            var mesh = ctx.createMesh(attributes, { data: g.cells }, ctx.TRIANGLES);
+            this.meshes.push(mesh);
+        }.bind(this))
+
+        this.updateSunPosition();
+    },
+    updateSunPosition: function() {
+        Mat4.setRotation(this.elevationMat, this.elevation/180*Math.PI, [0, 0, 1]);
+        Mat4.setRotation(this.rotationMat, this.azimuth/180*Math.PI, [0, 1, 0]);
+
+        Vec3.set3(this.sunPosition, 1, 0, 0);
+        Vec3.multMat4(this.sunPosition, this.elevationMat);
+        Vec3.multMat4(this.sunPosition, this.rotationMat);
     },
     watchShaders: function() {
         fs.watchFile(__dirname + '/Reflection.frag', function() {
@@ -314,10 +365,12 @@ Window.create({
         ctx.bindTexture(this.reflectionMap, 0);
         ctx.bindTexture(this.hammersleyPointSetMap, 1);
 
+        this.skyboxProgram.setUniform('uSunPosition', this.sunPosition);
         //move skybox to the camera position
         ctx.setDepthTest(false);
         ctx.bindProgram(this.skyboxProgram);
         this.skyboxProgram.setUniform('uExposure', this.exposure);
+        this.skyboxProgram.setUniform('uSunPosition', this.sunPosition);
         ctx.bindMesh(this.skyboxMesh);
         ctx.drawMesh();
 
@@ -326,8 +379,14 @@ Window.create({
             ctx.bindProgram(this.reflectionProgram);
             this.reflectionProgram.setUniform('uExposure', this.exposure);
             this.reflectionProgram.setUniform('uRoughness', this.roughness);
-            ctx.bindMesh(this.sphereMesh);
-            ctx.drawMesh();
+            this.reflectionProgram.setUniform('uSunPosition', this.sunPosition);
+            //console.log(ctx.getGL().getError())
+            this.meshes.forEach(function(m) {
+                ctx.bindMesh(m);
+                ctx.drawMesh();
+            }.bind(this))
+            //ctx.bindMesh(this.sphereMesh);
+            //ctx.drawMesh();
         }
 
         ctx.bindProgram(this.showColorsProgram);
