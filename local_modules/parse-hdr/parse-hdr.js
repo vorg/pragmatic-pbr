@@ -123,7 +123,7 @@ function readPixelsRawRLE(buffer, data, offset, fileOffset, scanline_width, num_
 
 //Returns data as floats and flipped along Y by default
 function parseHdr(buffer, options) {
-    var flipY = (options && options.flipY !== undefined) ? options.flipY : true;
+    var flipY = (options && options.flipY !== undefined) ? options.flipY : false;
 
     if (buffer instanceof ArrayBuffer) {
         buffer = new Uint8Array(buffer);

@@ -27,7 +27,7 @@ Window.create({
         reflectionFrag: { glsl: glslify(__dirname + '/Reflection.frag') },
         showColorsVert: { glsl: glslify(__dirname + '/../assets/glsl/ShowColors.vert') },
         showColorsFrag: { glsl: glslify(__dirname + '/../assets/glsl/ShowColors.frag') },
-        reflectionMap: { binary: ASSETS_DIR + '/envmaps/pisa_latlong_256.hdr' },
+        envMap: { binary: ASSETS_DIR + '/envmaps/pisa_latlong_256.hdr' },
         filmLut: { image: ASSETS_DIR + '/textures/FilmLut.png' }
     },
     exposure: 1,
@@ -77,8 +77,10 @@ Window.create({
 
         this.filmLutTexture = ctx.createTexture2D(res.filmLut);
 
-        var hdrInfo = parseHdr(res.reflectionMap);
-        this.reflectionMap = ctx.createTexture2D(hdrInfo.data, hdrInfo.shape[0], hdrInfo.shape[1], { type: ctx.FLOAT });
+        var hdrInfo = parseHdr(res.envMap, { flipY: true });
+        this.envMap = ctx.createTexture2D(hdrInfo.data, hdrInfo.shape[0], hdrInfo.shape[1], {
+            type: ctx.FLOAT
+        });
 
         var skyboxPositions = [[-1,-1],[1,-1], [1,1],[-1,1]];
         var skyboxFaces = [ [0, 1, 2], [0, 2, 3]];
@@ -152,7 +154,7 @@ Window.create({
         this.arcball.apply();
         ctx.setViewMatrix(this.camera.getViewMatrix());
 
-        ctx.bindTexture(this.reflectionMap, 0);
+        ctx.bindTexture(this.envMap, 0);
         ctx.bindTexture(this.filmLutTexture, 1);
 
         var sw = this.sidebarWidth;

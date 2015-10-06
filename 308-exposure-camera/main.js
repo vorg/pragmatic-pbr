@@ -71,8 +71,10 @@ Window.create({
         this.reflectionProgram.setUniform('uShutterSpeed', this.shutterSpeed);
         this.reflectionProgram.setUniform('uIso', this.iso);
 
-        var hdrInfo = parseHdr(res.envMap);
-        this.envMap = ctx.createTexture2D(hdrInfo.data, hdrInfo.shape[0], hdrInfo.shape[1], { type: ctx.FLOAT });
+        var hdrInfo = parseHdr(res.envMap, { flipY: true });
+        this.envMap = ctx.createTexture2D(hdrInfo.data, hdrInfo.shape[0], hdrInfo.shape[1], {
+            type: ctx.FLOAT
+        });
 
         var skyboxPositions = [[-1,-1],[1,-1], [1,1],[-1,1]];
         var skyboxFaces = [ [0, 1, 2], [0, 2, 3]];

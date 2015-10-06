@@ -52,7 +52,7 @@ Window.create({
         ctx.bindProgram(this.reflectionProgram);
         this.reflectionProgram.setUniform('uEnvMap', 0);
 
-        var hdrInfo = parseHdr(res.envMap);
+        var hdrInfo = parseHdr(res.envMap, { flipY: true });
         this.envMap = ctx.createTexture2D(hdrInfo.data, hdrInfo.shape[0], hdrInfo.shape[1], {
             type: ctx.FLOAT
         });
