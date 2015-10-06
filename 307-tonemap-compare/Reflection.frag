@@ -2,7 +2,7 @@
 precision highp float;
 #endif
 
-#pragma glslify: texture2DEnvLatLong  = require(../local_modules/glsl-texture2d-env-latlong)
+#pragma glslify: envMapEquirect  = require(../local_modules/glsl-envmap-equirect)
 #pragma glslify: toGamma  = require(glsl-gamma/out)
 #pragma glslify: tonemapReinhard  = require(../local_modules/glsl-tonemap-reinhard)
 #pragma glslify: tonemapFilmic  = require(../local_modules/glsl-tonemap-filmic)
@@ -17,8 +17,6 @@ uniform sampler2D uFilmLut;
 
 varying vec3 ecPosition;
 varying vec3 ecNormal;
-
-float flipEnvMap = -1.0;
 
 float LOG10 = log(10.0);
 
@@ -57,7 +55,7 @@ void main() {
 
     vec3 reflectionWorld = reflect(-wcEyeDir, normalize(wcNormal));
 
-    gl_FragColor.rgb = texture2DEnvLatLong(uEnvMap, reflectionWorld, flipEnvMap).rgb;
+    gl_FragColor.rgb = texture2D(uEnvMap, envMapEquirect(reflectionWorld)).rgb;
     gl_FragColor.rgb *= uExposure;
 
     if (uTonemappingMethod == 0.0) {

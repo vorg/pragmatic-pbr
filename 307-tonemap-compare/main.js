@@ -77,7 +77,7 @@ Window.create({
 
         this.filmLutTexture = ctx.createTexture2D(res.filmLut);
 
-        var hdrInfo = parseHdr(res.reflectionMap, { float: true });
+        var hdrInfo = parseHdr(res.reflectionMap);
         this.reflectionMap = ctx.createTexture2D(hdrInfo.data, hdrInfo.shape[0], hdrInfo.shape[1], { type: ctx.FLOAT });
 
         var skyboxPositions = [[-1,-1],[1,-1], [1,1],[-1,1]];
