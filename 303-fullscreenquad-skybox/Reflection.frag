@@ -2,15 +2,13 @@
 precision highp float;
 #endif
 
-#pragma glslify: texture2DEnvLatLong  = require(../local_modules/glsl-texture2d-env-latlong)
+#pragma glslify: envMapEquirect  = require(../local_modules/glsl-envmap-equirect)
 
 uniform mat4 uInverseViewMatrix;
 uniform sampler2D uEnvMap;
 
 varying vec3 ecPosition;
 varying vec3 ecNormal;
-
-float flipEvnMap = -1.0;
 
 void main() {
     vec3 ecEyeDir = normalize(-ecPosition);
@@ -19,5 +17,5 @@ void main() {
 
     vec3 reflectionWorld = reflect(-wcEyeDir, normalize(wcNormal));
 
-    gl_FragColor = texture2DEnvLatLong(uEnvMap, reflectionWorld, flipEvnMap);
+    gl_FragColor = texture2D(uEnvMap, envMapEquirect(reflectionWorld));
 }
