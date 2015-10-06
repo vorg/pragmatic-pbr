@@ -50,9 +50,10 @@ Window.create({
         ctx.bindProgram(this.reflectionProgram);
         this.reflectionProgram.setUniform('uEnvMap', 0);
 
-        var hdrInfo = parseHdr(res.envMap, { float: true });
+        var hdrInfo = parseHdr(res.envMap);
         this.envMap = ctx.createTexture2D(hdrInfo.data, hdrInfo.shape[0], hdrInfo.shape[1], {
-            type: ctx.FLOAT
+            type: ctx.FLOAT,
+            flipY: true
         });
 
         var skyboxPositions = [[-1,-1],[1,-1], [1,1],[-1,1]];
