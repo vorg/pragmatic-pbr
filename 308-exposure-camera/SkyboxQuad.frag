@@ -2,11 +2,9 @@
 precision highp float;
 #endif
 
-#pragma glslify: texture2DEnvLatLong  = require(../local_modules/glsl-texture2d-env-latlong)
+#pragma glslify: envMapEquirect  = require(../local_modules/glsl-envmap-equirect)
 #pragma glslify: toGamma  = require(glsl-gamma/out)
 #pragma glslify: tonemapReinhard  = require(../local_modules/glsl-tonemap-reinhard)
-
-float flipEnvMap = -1.0;
 
 /*
 * Get an exposure using the Saturation-based Speed method.
@@ -54,7 +52,7 @@ void main() {
     vec3 N = normalize(vNormal);
     //gl_FragColor.rgb = rgbe2rgb(texture2DEnvLatLong(uEnvMap, N));
     //gl_FragColor.rgb *= log(uExposure);
-    gl_FragColor.rgb = texture2DEnvLatLong(uEnvMap, N, flipEnvMap).rgb;
+    gl_FragColor.rgb = texture2D(uEnvMap, envMapEquirect(N)).rgb;
     gl_FragColor.rgb *= getStandardOutputBasedExposure(uAperture, uShutterSpeed, uIso);
     //gl_FragColor.rgb *= getStandardOutputBasedExposure(16, uExposure, 100.0, 0.18);
     gl_FragColor.rgb = tonemapReinhard(gl_FragColor.rgb);
