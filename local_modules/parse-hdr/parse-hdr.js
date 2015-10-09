@@ -122,9 +122,7 @@ function readPixelsRawRLE(buffer, data, offset, fileOffset, scanline_width, num_
 }
 
 //Returns data as floats and flipped along Y by default
-function parseHdr(buffer, options) {
-    var flipY = (options && options.flipY !== undefined) ? options.flipY : false;
-
+function parseHdr(buffer) {
     if (buffer instanceof ArrayBuffer) {
         buffer = new Uint8Array(buffer);
     }
@@ -197,13 +195,6 @@ function parseHdr(buffer, options) {
         b *= f;
 
         var floatOffset = offset;
-
-        if (flipY) {
-            var x = (offset / 4) % width;
-            var y = ((offset / 4) / width) | 0;
-
-            floatOffset = (x + (height - 1 - y) * width) * 4;
-        }
 
         floatData[floatOffset+0] = r;
         floatData[floatOffset+1] = g;
