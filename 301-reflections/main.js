@@ -81,7 +81,6 @@ Window.create({
         Quat.fromDirection(this.cameraRot, this.cameraDir);
     },
     onTouchMove: function(e) {
-        console.log(e);
         this.updateCamera(e.touches[0].clientX, e.touches[0].clientY);
         e.preventDefault();
         return false;
@@ -152,6 +151,7 @@ Window.create({
                 }
                 else {
                     this.debugDraw.setColor([1,0,0,1]);
+                    //we need to flip the ray as we are inside the cube
                     var invDir = [-dir[0], -dir[1], 0];
                     var boxHit = aabbIntersection([], this.cameraPos, invDir, aabb);
                     this.debugDraw.drawLine(
