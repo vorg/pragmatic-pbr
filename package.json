@@ -35,6 +35,8 @@
     "pex-sys": "variablestudio/pex-sys",
     "primitive-cube": "^1.0.2",
     "primitive-sphere": "^2.0.0",
+    "ray-aabb-intersection": "^1.0.1",
+    "ray-sphere-intersection": "^1.0.0",
     "re-map": "^0.1.1"
   },
   "devDependencies": {
