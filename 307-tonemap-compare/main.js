@@ -28,7 +28,6 @@ Window.create({
         showColorsVert: { glsl: glslify(__dirname + '/../assets/glsl/ShowColors.vert') },
         showColorsFrag: { glsl: glslify(__dirname + '/../assets/glsl/ShowColors.frag') },
         envMap: { binary: ASSETS_DIR + '/envmaps/pisa_latlong_256.hdr' },
-        filmLut: { image: ASSETS_DIR + '/textures/FilmLut.png' }
     },
     exposure: 1,
     sidebarWidth: 190,
@@ -64,18 +63,14 @@ Window.create({
         this.skyboxProgram = ctx.createProgram(res.skyboxVert, res.skyboxFrag);
         ctx.bindProgram(this.skyboxProgram);
         this.skyboxProgram.setUniform('uEnvMap', 0);
-        this.skyboxProgram.setUniform('uFilmLut', 1);
         this.skyboxProgram.setUniform('uExposure', this.exposure);
 
         this.reflectionProgram = ctx.createProgram(res.reflectionVert, res.reflectionFrag);
         ctx.bindProgram(this.reflectionProgram);
         this.reflectionProgram.setUniform('uEnvMap', 0);
-        this.reflectionProgram.setUniform('uFilmLut', 1);
         this.reflectionProgram.setUniform('uExposure', this.exposure);
 
         this.showColorsProgram = ctx.createProgram(res.showColorsVert, res.showColorsFrag);
-
-        this.filmLutTexture = ctx.createTexture2D(res.filmLut);
 
         var hdrInfo = parseHdr(res.envMap);
         this.envMap = ctx.createTexture2D(hdrInfo.data, hdrInfo.shape[0], hdrInfo.shape[1], {
