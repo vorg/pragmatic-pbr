@@ -19,7 +19,7 @@ vec2 envMapEquirect(vec3 wcNormal, float flipEnvMap) {
 }
 
 vec2 envMapEquirect(vec3 wcNormal) {
-    //-1.0 for left handed coorinate system oriented texture (usual case)
+    //-1.0 for left handed coordinate system oriented texture (usual case)
     return envMapEquirect(wcNormal, -1.0);
 }
 
