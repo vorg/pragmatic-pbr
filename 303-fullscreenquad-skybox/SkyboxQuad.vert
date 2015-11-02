@@ -13,7 +13,12 @@ varying vec3 wcNormal;
 void main() {
     mat4 inverseProjection = inverse(uProjectionMatrix);
     mat3 inverseModelview = transpose(mat3(uViewMatrix));
+
+    //transform from the normalized device coordinates back to the view space
     vec3 unprojected = (inverseProjection * aPosition).xyz;
+
+    //transfrom from the view space back to the world space
+    //and use it as a sampling vector
     wcNormal = inverseModelview * unprojected;
 
     gl_Position = aPosition;
