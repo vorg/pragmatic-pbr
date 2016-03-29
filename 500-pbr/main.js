@@ -7,6 +7,8 @@ var glslify      = require('glslify-promise');
 var Texture2D    = require('pex-context/Texture2D');
 var TextureCube  = require('pex-context/TextureCube');
 var GUI          = require('pex-gui');
+var parseHdr     = require('../local_modules/parse-hdr');
+var isBrowser    = require('is-browser');
 
 function grid(w, h, nw, nh, margin){
     margin = margin || 0;
@@ -30,6 +32,8 @@ function grid(w, h, nw, nh, margin){
 var W = 1280;
 var H = 720;
 
+var ASSETS_DIR = isBrowser ? '../assets' :  __dirname + '/../assets';
+
 var viewports = grid(W, H, 4, 3);
 var materials = [];
 
@@ -39,14 +43,21 @@ Window.create({
         height: 720
     },
     resources: {
+        skyboxVert: { glsl: glslify(__dirname + '/glsl/SkyboxQuad.vert') },
+        skyboxFrag: { glsl: glslify(__dirname + '/glsl/SkyboxQuad.frag') },
         showNormalsVert: { text: __dirname + '/glsl/ShowNormals.vert' },
         showNormalsFrag: { text: __dirname + '/glsl/ShowNormals.frag' },
         showColorsVert: { text: __dirname + '/glsl/ShowColors.vert' },
         showColorsFrag: { text: __dirname + '/glsl/ShowColors.frag' },
         specularPhongVert: { glsl: glslify(__dirname + '/glsl/SpecularPhong.vert') },
         specularPhongFrag: { glsl: glslify(__dirname + '/glsl/SpecularPhong.frag') },
+        specularGGXVert: { glsl: glslify(__dirname + '/glsl/SpecularGGX.vert') },
+        specularGGXFrag: { glsl: glslify(__dirname + '/glsl/SpecularGGX.frag') },
         specularCookTorranceVert: { glsl: glslify(__dirname + '/glsl/SpecularCookTorrance.vert') },
-        specularCookTorranceFrag: { glsl: glslify(__dirname + '/glsl/SpecularCookTorrance.frag') }
+        specularCookTorranceFrag: { glsl: glslify(__dirname + '/glsl/SpecularCookTorrance.frag') },
+        uberShaderVert: { glsl: glslify(__dirname + '/glsl/UberShader.vert') },
+        uberShaderFrag: { glsl: glslify(__dirname + '/glsl/UberShader.frag') },
+        envMap: { binary: ASSETS_DIR + '/envmaps/pisa_latlong_256.hdr' },
     },
     init: function() {
         this.initMeshes();
@@ -71,10 +82,28 @@ Window.create({
         ];
         var sphereIndices = { data: sphere.cells, usage: ctx.STATIC_DRAW };
         this.sphereMesh = ctx.createMesh(attributes, sphereIndices, ctx.TRIANGLES);
+
+        var skyboxPositions = [[-1,-1],[1,-1], [1,1],[-1,1]];
+        var skyboxFaces = [ [0, 1, 2], [0, 2, 3]];
+        var skyboxAttributes = [
+            { data: skyboxPositions, location: ctx.ATTRIB_POSITION },
+        ];
+        var skyboxIndices = { data: skyboxFaces };
+        this.skyboxMesh = ctx.createMesh(skyboxAttributes, skyboxIndices);
     },
     initMaterials: function() {
         var ctx = this.getContext();
         var res = this.getResources();
+
+        var hdrInfo = parseHdr(res.envMap);
+        var envMap = ctx.createTexture2D(hdrInfo.data, hdrInfo.shape[0], hdrInfo.shape[1], {
+            type: ctx.FLOAT
+        });
+
+        this.showColorsProgram = ctx.createProgram(res.showColorsVert, res.showColorsFrag)
+        this.skyboxProgram = ctx.createProgram(res.skyboxVert, res.skyboxFrag)
+
+        this.debugDraw = new Draw(ctx);
 
         materials.push({
             name: 'normals',
@@ -82,7 +111,7 @@ Window.create({
         })
 
         materials.push({
-            name: 'blinnPhong',
+            name: 'Blinn Phong',
             program: ctx.createProgram(res.specularPhongVert, res.specularPhongFrag),
             uniforms: {
                 uRoughness: 0.5,
@@ -92,7 +121,19 @@ Window.create({
         })
 
         materials.push({
-            name: 'cookTorrance',
+            name: 'GGX',
+            program: ctx.createProgram(res.specularGGXVert, res.specularGGXFrag),
+            uniforms: {
+                uRoughness: 0.5,
+                uRoughnessParams: { min: 0.01, max: 1 },
+                uN0: 0.02,
+                uN0Params: { min: 0.01, max: 1 },
+                uLightPosition: [10, 10, 0]
+            }
+        })
+
+        materials.push({
+            name: 'Cook Torrance',
             program: ctx.createProgram(res.specularCookTorranceVert, res.specularCookTorranceFrag),
             uniforms: {
                 uRoughness: 0.5,
@@ -103,9 +144,20 @@ Window.create({
             }
         })
 
-        this.showColorsProgram = ctx.createProgram(res.showColorsVert, res.showColorsFrag)
-
-        this.debugDraw = new Draw(ctx);
+        materials.push({
+            name: 'Uber Shader',
+            program: ctx.createProgram(res.uberShaderVert, res.uberShaderFrag),
+            skyboxProgram: this.skyboxProgram,
+            skybox: true,
+            uniforms: {
+                uRoughness: 0.5,
+                uRoughnessParams: { min: 0.01, max: 1 },
+                uExposure: 0.5,
+                uExposureParams: { min: 0.01, max: 2 },
+                uLightPosition: [10, 10, 0],
+                uReflectionMap: envMap
+            }
+        })
     },
     initGUI: function() {
         var ctx = this.getContext();
@@ -153,6 +205,18 @@ Window.create({
             ctx.setScissor(viewport[0], H - viewport[1] - viewport[3], viewport[2], viewport[3])
             ctx.setClearColor(0.1, 0.1, 0.1, 0.0);
             ctx.clear(ctx.COLOR_BIT | ctx.DEPTH_BIT);
+
+            if (material.skyboxProgram) {
+                ctx.pushState(ctx.DEPTH_BIT);
+                ctx.setDepthTest(false);
+                ctx.bindProgram(material.skyboxProgram);
+                material.skyboxProgram.setUniform('uExposure', material.uniforms.uExposure)
+                material.skyboxProgram.setUniform('uEnvMap', 0)
+                ctx.bindTexture(material.uniforms.uReflectionMap, 0)
+                ctx.bindMesh(this.skyboxMesh);
+                ctx.drawMesh()
+                ctx.popState(ctx.DEPTH_BIT);
+            }
 
             ctx.bindProgram(material.program);
             var numTextures = 0;
