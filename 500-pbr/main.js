@@ -44,7 +44,9 @@ Window.create({
         showColorsVert: { text: __dirname + '/glsl/ShowColors.vert' },
         showColorsFrag: { text: __dirname + '/glsl/ShowColors.frag' },
         specularPhongVert: { glsl: glslify(__dirname + '/glsl/SpecularPhong.vert') },
-        specularPhongFrag: { glsl: glslify(__dirname + '/glsl/SpecularPhong.frag') }
+        specularPhongFrag: { glsl: glslify(__dirname + '/glsl/SpecularPhong.frag') },
+        specularCookTorranceVert: { glsl: glslify(__dirname + '/glsl/SpecularCookTorrance.vert') },
+        specularCookTorranceFrag: { glsl: glslify(__dirname + '/glsl/SpecularCookTorrance.frag') }
     },
     init: function() {
         this.initMeshes();
@@ -88,6 +90,15 @@ Window.create({
                 uLightPosition: [10, 10, 0]
             }
         })
+
+        materials.push({
+            name: 'cookTorrance',
+            program: ctx.createProgram(res.specularCookTorranceVert, res.specularCookTorranceFrag),
+            uniforms: {
+                uRoughness: 0.5,
+                uRoughnessParams: { min: 0.01, max: 1 },
+                uFresnel: 0.0,
+                uFresnelParams: { min: 0.01, max: 1 },
                 uLightPosition: [10, 10, 0]
             }
         })
