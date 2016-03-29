@@ -83,8 +83,11 @@ Window.create({
             name: 'blinnPhong',
             program: ctx.createProgram(res.specularPhongVert, res.specularPhongFrag),
             uniforms: {
-                uShininess: 128,
-                uShininessParams: { min: 1, max: 1024 },
+                uRoughness: 0.5,
+                uRoughnessParams: { min: 0.01, max: 1 },
+                uLightPosition: [10, 10, 0]
+            }
+        })
                 uLightPosition: [10, 10, 0]
             }
         })

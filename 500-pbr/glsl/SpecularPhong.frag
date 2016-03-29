@@ -3,7 +3,7 @@
 uniform vec3 eyePosition;
 uniform vec3 lightPosition;
 
-uniform float uShininess;
+uniform float uRoughness;
 
 varying vec3 ecPosition;
 varying vec3 ecNormal;
@@ -16,7 +16,10 @@ void main() {
     vec3 lightDirection = normalize(ecLightPosition - ecPosition);
     vec3 normal = normalize(ecNormal);
 
-    float power = blinnPhongSpec(lightDirection, viewDirection, normal, uShininess);
+    float glossiness = 1.0 - uRoughness;
+    float specPower = pow(2.0, glossiness * 11.0); //1..2048
+
+    float power = blinnPhongSpec(lightDirection, viewDirection, normal, specPower);
 
     gl_FragColor = vec4(power,power,power,1.0);
 }
