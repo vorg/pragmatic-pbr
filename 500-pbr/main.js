@@ -9,6 +9,7 @@ var TextureCube  = require('pex-context/TextureCube');
 var GUI          = require('pex-gui');
 var parseHdr     = require('../local_modules/parse-hdr');
 var isBrowser    = require('is-browser');
+var UberMaterial = require('./UberMaterial')
 
 function grid(w, h, nw, nh, margin){
     margin = margin || 0;
@@ -34,7 +35,7 @@ var H = 720;
 
 var ASSETS_DIR = isBrowser ? '../assets' :  __dirname + '/../assets';
 
-var viewports = grid(W, H, 4, 3);
+var viewports = grid(W, H, 3, 2);
 var materials = [];
 
 Window.create({
@@ -110,54 +111,15 @@ Window.create({
             program: ctx.createProgram(res.showNormalsVert, res.showNormalsFrag)
         })
 
-        materials.push({
-            name: 'Blinn Phong',
-            program: ctx.createProgram(res.specularPhongVert, res.specularPhongFrag),
-            uniforms: {
-                uRoughness: 0.5,
-                uRoughnessParams: { min: 0.01, max: 1 },
-                uLightPosition: [10, 10, 0]
-            }
-        })
+        materials.push(new UberMaterial(ctx, {
+            uReflectionMap: envMap,
+            useSpecular: true
+        }))
 
-        materials.push({
-            name: 'GGX',
-            program: ctx.createProgram(res.specularGGXVert, res.specularGGXFrag),
-            uniforms: {
-                uRoughness: 0.5,
-                uRoughnessParams: { min: 0.01, max: 1 },
-                uN0: 0.02,
-                uN0Params: { min: 0.01, max: 1 },
-                uLightPosition: [10, 10, 0]
-            }
-        })
-
-        materials.push({
-            name: 'Cook Torrance',
-            program: ctx.createProgram(res.specularCookTorranceVert, res.specularCookTorranceFrag),
-            uniforms: {
-                uRoughness: 0.5,
-                uRoughnessParams: { min: 0.01, max: 1 },
-                uFresnel: 0.0,
-                uFresnelParams: { min: 0.01, max: 1 },
-                uLightPosition: [10, 10, 0]
-            }
-        })
-
-        materials.push({
-            name: 'Uber Shader',
-            program: ctx.createProgram(res.uberShaderVert, res.uberShaderFrag),
-            skyboxProgram: this.skyboxProgram,
-            skybox: true,
-            uniforms: {
-                uRoughness: 0.5,
-                uRoughnessParams: { min: 0.01, max: 1 },
-                uExposure: 0.5,
-                uExposureParams: { min: 0.01, max: 2 },
-                uLightPosition: [10, 10, 0],
-                uReflectionMap: envMap
-            }
-        })
+        materials.push(new UberMaterial(ctx, {
+            uReflectionMap: envMap,
+            useSpecular: false
+        }))
     },
     initGUI: function() {
         var ctx = this.getContext();
@@ -206,12 +168,12 @@ Window.create({
             ctx.setClearColor(0.1, 0.1, 0.1, 0.0);
             ctx.clear(ctx.COLOR_BIT | ctx.DEPTH_BIT);
 
-            if (material.skyboxProgram) {
+            if (material.uniforms && material.uniforms.uReflectionMap) {
                 ctx.pushState(ctx.DEPTH_BIT);
                 ctx.setDepthTest(false);
-                ctx.bindProgram(material.skyboxProgram);
-                material.skyboxProgram.setUniform('uExposure', material.uniforms.uExposure)
-                material.skyboxProgram.setUniform('uEnvMap', 0)
+                ctx.bindProgram(this.skyboxProgram);
+                this.skyboxProgram.setUniform('uExposure', material.uniforms.uExposure)
+                this.skyboxProgram.setUniform('uEnvMap', 0)
                 ctx.bindTexture(material.uniforms.uReflectionMap, 0)
                 ctx.bindMesh(this.skyboxMesh);
                 ctx.drawMesh()

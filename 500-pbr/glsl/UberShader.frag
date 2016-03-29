@@ -21,24 +21,13 @@ void main() {
 
     vec3 reflectionWorld = reflect(-wcEyeDir, normalize(wcNormal));
 
+    gl_FragColor.rgb = vec3(0.0);
+
+    #ifdef USE_SPECULAR
     gl_FragColor.rgb = texture2D(uEnvMap, envMapEquirect(reflectionWorld)).rgb;
+    #endif
+
     gl_FragColor.rgb *= uExposure;
-
-    /*
-    vec3 ecEyePos = vec3(0.0, 0.0, 0.0);
-    vec3 viewDirection = normalize(ecEyePos - ecPosition);
-
-    vec3 lightDirection = normalize(ecLightPosition - ecPosition);
-    vec3 normal = normalize(ecNormal);
-
-    float glossiness = 1.0 - uRoughness;
-    float specPower = pow(2.0, glossiness * 11.0); //1..2048
-
-    float power = blinnPhongSpec(lightDirection, viewDirection, normal, specPower);
-
-    gl_FragColor = vec4(power,power,power,1.0);
-    */
-
     gl_FragColor.rgb = tonemapUncharted2(gl_FragColor.rgb);
     gl_FragColor.rgb = toGamma(gl_FragColor.rgb);
     gl_FragColor.a = 1.0;
