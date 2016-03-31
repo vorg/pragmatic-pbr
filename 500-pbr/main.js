@@ -8,20 +8,21 @@ var Texture2D    = require('pex-context/Texture2D');
 var TextureCube  = require('pex-context/TextureCube');
 var GUI          = require('pex-gui');
 var parseHdr     = require('../local_modules/parse-hdr');
+var parseDds     = require('parse-dds');
 var isBrowser    = require('is-browser');
-var UberMaterial = require('./UberMaterial')
+var UberMaterial = require('./UberMaterial');
 
-function grid(w, h, nw, nh, margin){
+function grid(x, y, w, h, nw, nh, margin){
     margin = margin || 0;
     var max =  nw * nh;
     var cw = Math.floor(w / nw);
     var ch = Math.floor(h / nh);
     var cells = [];
-    for(var y = 0; y < nh; ++y){
-        for(var x = 0; x < nw; ++x){
+    for(var iy = 0; iy < nh; ++iy){
+        for(var ix = 0; ix < nw; ++ix){
             cells.push([
-                x * cw + margin,
-                y * ch + margin,
+                x + ix * cw + margin,
+                y + iy * ch + margin,
                 cw - 2 * margin,
                 ch - 2 * margin
             ]);
@@ -35,7 +36,7 @@ var H = 720;
 
 var ASSETS_DIR = isBrowser ? '../assets' :  __dirname + '/../assets';
 
-var viewports = grid(W, H, 3, 2);
+var viewports = grid(200, 0, W-200, H, 3, 2);
 var materials = [];
 
 Window.create({
@@ -60,6 +61,8 @@ Window.create({
         uberShaderFrag: { glsl: glslify(__dirname + '/glsl/UberShader.frag') },
         reflectionMap: { binary: ASSETS_DIR + '/envmaps/garage.hdr' },
         irradianceMap: { binary: ASSETS_DIR + '/envmaps/garage_diffuse.hdr' },
+        irradianceCubemap: { binary: ASSETS_DIR + '/envmaps_pmrem_dds/GracieIrradiance.dds' },
+        reflectionCubemap: { binary: ASSETS_DIR + '/envmaps_pmrem_dds/GracieReflection.dds' },
     },
     init: function() {
         this.initMeshes();
@@ -69,7 +72,7 @@ Window.create({
     },
     initCamera: function() {
         this.camera = new PerspCamera(45, viewports[0][2] / viewports[0][3], 0.1, 100);
-        this.camera.lookAt([4, 4, 4], [0, 0, 0], [0, 1, 0]);
+        this.camera.lookAt([4, 0.5, -4], [0, 0, 0], [0, 1, 0]);
         this.arcball = new Arcball(this.camera, W, H);
         this.addEventListener(this.arcball);
     },
@@ -97,14 +100,54 @@ Window.create({
         var ctx = this.getContext();
         var res = this.getResources();
 
-        var reflectionMapInfo = parseHdr(res.reflectionMap);
-        var reflectionMap = ctx.createTexture2D(reflectionMapInfo.data, reflectionMapInfo.shape[0], reflectionMapInfo.shape[1], {
+        var irradianceMapInfo = parseHdr(res.irradianceMap);
+        var irradianceMap = this.irradianceMap = ctx.createTexture2D(irradianceMapInfo.data, irradianceMapInfo.shape[0], irradianceMapInfo.shape[1], {
             type: ctx.FLOAT
         });
 
-        var irradianceMapInfo = parseHdr(res.irradianceMap);
-        var irradianceMap = ctx.createTexture2D(irradianceMapInfo.data, irradianceMapInfo.shape[0], irradianceMapInfo.shape[1], {
+        var irradianceCubemapInfo = parseDds(res.irradianceCubemap);
+        var numMipmapLevels = irradianceCubemapInfo.images.length / 6;
+        var faces = [];
+        for(var faceIndex=0; faceIndex<6; faceIndex++) {
+          for(var mipmapLevel=0; mipmapLevel<numMipmapLevels; mipmapLevel++) {
+              var faceInfo = irradianceCubemapInfo.images[faceIndex * numMipmapLevels + mipmapLevel];
+              faces.push({
+                  width: faceInfo.shape[0],
+                  height: faceInfo.shape[1],
+                  face: faceIndex,
+                  lod: mipmapLevel,
+                  data: new Float32Array(res.irradianceCubemap.slice(faceInfo.offset, faceInfo.offset + faceInfo.length))
+              })
+          }
+        }
+        var irradianceCubemap = this.irradianceCubemap = ctx.createTextureCube(faces, irradianceCubemapInfo.shape[0], irradianceCubemapInfo.shape[1], {
             type: ctx.FLOAT
+        });
+
+        var reflectionMapInfo = parseHdr(res.reflectionMap);
+        var reflectionMap = this.reflectionMap = ctx.createTexture2D(reflectionMapInfo.data, reflectionMapInfo.shape[0], reflectionMapInfo.shape[1], {
+            type: ctx.FLOAT
+        });
+
+        var reflectionCubemapInfo = parseDds(res.reflectionCubemap);
+        var numMipmapLevels = reflectionCubemapInfo.images.length / 6;
+        var faces = [];
+        for(var faceIndex=0; faceIndex<6; faceIndex++) {
+          for(var mipmapLevel=0; mipmapLevel<numMipmapLevels; mipmapLevel++) {
+              var faceInfo = reflectionCubemapInfo.images[faceIndex * numMipmapLevels + mipmapLevel];
+              faces.push({
+                  width: faceInfo.shape[0],
+                  height: faceInfo.shape[1],
+                  face: faceIndex,
+                  lod: mipmapLevel,
+                  data: new Float32Array(res.reflectionCubemap.slice(faceInfo.offset, faceInfo.offset + faceInfo.length))
+              })
+          }
+        }
+        var reflectionCubemap = this.reflectionCubemap = ctx.createTextureCube(faces, reflectionCubemapInfo.shape[0], reflectionCubemapInfo.shape[1], {
+            type: ctx.FLOAT,
+            //minFilter: ctx.LINEAR_MIPMAP_LINEAR
+            minFilter: ctx.LINEAR_MIPMAP_NEAREST
         });
 
         this.showColorsProgram = ctx.createProgram(res.showColorsVert, res.showColorsFrag)
@@ -114,39 +157,39 @@ Window.create({
 
         materials.push(new UberMaterial(ctx, {
             name: 'normals',
-            uReflectionMap: reflectionMap,
-            uIrradianceMap: irradianceMap,
+            uIrradianceMap: irradianceCubemap,
+            uReflectionMap: reflectionCubemap,
             showNormals: true
         }))
 
         materials.push(new UberMaterial(ctx, {
             name: 'texCoords',
-            uReflectionMap: reflectionMap,
-            uIrradianceMap: irradianceMap,
+            uIrradianceMap: irradianceCubemap,
+            uReflectionMap: reflectionCubemap,
             showTexCoords: true
         }))
 
         materials.push(new UberMaterial(ctx, {
             name: 'reflection',
-            uReflectionMap: reflectionMap,
-            uIrradianceMap: irradianceMap,
+            uIrradianceMap: irradianceCubemap,
+            uReflectionMap: reflectionCubemap,
             useSpecular: true
         }))
 
         materials.push(new UberMaterial(ctx, {
             name: 'fresnel',
-            uReflectionMap: reflectionMap,
-            uIrradianceMap: irradianceMap,
+            uIrradianceMap: irradianceCubemap,
+            uReflectionMap: reflectionCubemap,
             showFresnel: true
         }))
 
         materials.push(new UberMaterial(ctx, {
             name: 'final color',
-            uReflectionMap: reflectionMap,
-            uIrradianceMap: irradianceMap,
+            uIrradianceMap: irradianceCubemap,
+            uReflectionMap: reflectionCubemap,
             uAlbedoColor: [0.6, 0.1, 0.1, 1.0],
             uAlbedoColorParams: { type: 'color' },
-            uLightColor: [0.6, 0.1, 0.1, 1.0],
+            uLightColor: [1, 1, 1, 1.0],
             uLightColorParams: { min: 0, max: 10 }
         }))
     },
@@ -155,6 +198,11 @@ Window.create({
 
         var gui = this.gui = new GUI(ctx, W, H);
         this.addEventListener(gui)
+
+        this.gui.addTexture2D('Reflection Map', this.reflectionMap)
+        this.gui.addTexture2D('Irradiance Map', this.irradianceMap)
+        this.gui.addTextureCube('Reflection CubeMap', this.reflectionCubemap)
+        this.gui.addTextureCube('Irradiance CubeMap', this.irradianceCubemap)
 
         materials.forEach(function(material, i) {
             var viewport = viewports[i];

@@ -9,6 +9,8 @@ var solidColorVert = glslify(__dirname + '/glsl/SolidColor.vert');
 var solidColorFrag = glslify(__dirname + '/glsl/SolidColor.frag');
 
 
+var TextureCube = require('pex-context/TextureCube');
+
 function UberShader(ctx, uniforms) {
     this.ctx = ctx;
     this.uniforms = Object.assign({
@@ -69,6 +71,12 @@ UberShader.prototype.compile = function() {
     }
     if (uniforms.showFresnel) {
         flags.push('#define SHOW_FRESNEL');
+    }
+    if (uniforms.uReflectionMap instanceof TextureCube) {
+        flags.push('#define REFLECTION_MAP_CUBE');
+    }
+    if (uniforms.uIrradianceMap instanceof TextureCube) {
+        flags.push('#define IRRADIANCE_MAP_CUBE');
     }
     //if (Array.isArray(uniforms.uAlbedo)) {
     //    flags.push('#define ALBEDO_CONST');

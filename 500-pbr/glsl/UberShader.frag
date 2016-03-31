@@ -1,7 +1,21 @@
 #pragma glslify: envMapEquirect  = require(../../local_modules/glsl-envmap-equirect)
+#pragma glslify: envMapCube      = require(../../local_modules/glsl-envmap-cube)
 #pragma glslify: toGamma  = require(glsl-gamma/out)
 #pragma glslify: toLinear = require(glsl-gamma/in)
 #pragma glslify: tonemapUncharted2  = require(../../local_modules/glsl-tonemap-uncharted2)
+
+//Disney
+//https://github.com/wdas/brdf/blob/master/src/brdfs/disney.brdf
+
+#ifdef GL_ES
+precision highp float;
+#endif
+
+#ifdef GL_ES
+  #extension GL_EXT_shader_texture_lod : require
+#else
+  #extension GL_ARB_shader_texture_lod : require
+#endif
 
 uniform mat4 uInverseViewMatrix;
 uniform float uExposure;
@@ -91,19 +105,50 @@ vec3 getFresnel(inout FragData data) {
     return (1.0 - data.specularity) * fresnel;
 }
 
-uniform sampler2D uReflectionMap;
+#ifdef REFLECTION_MAP_CUBE
+    uniform samplerCube uReflectionMap;
 
-vec3 getReflection(inout FragData data) {
-    vec3 reflectionWorld = reflect(-data.eyeDirWorld, data.normalWorld);
-    return texture2D(uReflectionMap, envMapEquirect(reflectionWorld)).rgb;
-}
+    vec3 getReflection(inout FragData data) {
+        float maxMipMapLevel = 7.0; //TODO: const
+        vec3 reflectionWorld = reflect(-data.eyeDirWorld, data.normalWorld);
+        vec3 R = envMapCube(reflectionWorld);
+        float k = 1.0 - (1.0 - data.roughness) * (1.0 - data.roughness);
+        float lod = k * maxMipMapLevel;
+        float upLod = floor(lod);
+        float downLod = ceil(lod);
+        //vec4 a = textureCubeLod(reflectionMap, fixSeams(reflectionWorld, upLod), upLod);
+        //vec4 b = textureCubeLod(reflectionMap, fixSeams(reflectionWorld, downLod), downLod);
+        vec3 a = textureCubeLod(uReflectionMap, R, upLod).rgb;
+        vec3 b = textureCubeLod(uReflectionMap, R, downLod).rgb;
+        return mix(a, b, lod - upLod);
+        //return textureCubeLod(uReflectionMap, , data.roughness * 8.0).rgb;
+    }
+#else
+    uniform sampler2D uReflectionMap;
 
-uniform sampler2D uIrradianceMap;
+    vec3 getReflection(inout FragData data) {
+        vec3 reflectionWorld = reflect(-data.eyeDirWorld, data.normalWorld);
+        return texture2D(uReflectionMap, envMapEquirect(reflectionWorld)).rgb;
+    }
+#endif
 
-vec3 getIrradiance(inout FragData data) {
-    vec3 reflectionWorld = reflect(-data.eyeDirWorld, data.normalWorld);
-    return texture2D(uIrradianceMap, envMapEquirect(reflectionWorld)).rgb;
-}
+#ifdef IRRADIANCE_MAP_CUBE
+    uniform samplerCube uIrradianceMap;
+
+    vec3 getIrradiance(inout FragData data) {
+        float maxMipMapLevel = 7.0; //TODO: const
+        vec3 reflectionWorld = reflect(-data.eyeDirWorld, data.normalWorld);
+        vec3 R = envMapCube(reflectionWorld);
+        return textureCube(uIrradianceMap, R).rgb;
+    }
+#else
+    uniform sampler2D uReflectionMap;
+
+    vec3 getIrradiance(inout FragData data) {
+        vec3 reflectionWorld = reflect(-data.eyeDirWorld, data.normalWorld);
+        return texture2D(uIrradianceMap, envMapEquirect(reflectionWorld)).rgb;
+    }
+#endif
 
 void main() {
     FragData data;
@@ -133,10 +178,10 @@ void main() {
     data.metalness = getMetalness(data);
 
     //TODO: figure out specularity color for diaelectricts with small metalness
-    data.specularity = vec3(0.04); //around plastic
+    data.specularity = toLinear(vec3(0.04)); //TODO: 0.04 = plastic, is this gamma or linear?
     if (data.metalness == 1.0) {
         data.specularity = data.albedo;
-        data.albedo = vec3(0.0); //metal don't have albedo
+        data.albedo = vec3(0.0); //TODO: metals don't have albedo, what about irradiance?
     }
 
     //TODO: reflectance?
@@ -151,12 +196,13 @@ void main() {
     data.reflectionColor = getReflection(data);
 
     data.color = data.albedo * data.irradianceColor; //TODO: multiply by albedo?
+    //? data.color += data.albedo * data.irradianceColor * (1.0 - data.specularity);\n'
 
     //TODO: verify that
     //mixing diffuse and specular according to specularity for energy conservation
     data.color += mix(lightDiffuse, lightSpecular, data.specularity);
 
-    data.color += data.specularity * data.reflectionColor;
+    data.color += data.specularity * data.reflectionColor;//TODO: is specular reflection shadowed by NdotL?
 
     data.color *= uExposure;
 
