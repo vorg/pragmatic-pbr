@@ -13,7 +13,7 @@ vec3 Uncharted2Tonemap(vec3 x) {
 //Based on Filmic Tonemapping Operators http://filmicgames.com/archives/75
 vec3 tonemapUncharted2(vec3 color) {
     float ExposureBias = 2.0;
-    vec3 curr = Uncharted2Tonemap(ExposureBias * gl_FragColor.rgb);
+    vec3 curr = Uncharted2Tonemap(ExposureBias * color);
 
     vec3 whiteScale = 1.0 / Uncharted2Tonemap(vec3(W));
     return curr * whiteScale;
