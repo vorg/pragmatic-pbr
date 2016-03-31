@@ -58,7 +58,8 @@ Window.create({
         specularCookTorranceFrag: { glsl: glslify(__dirname + '/glsl/SpecularCookTorrance.frag') },
         uberShaderVert: { glsl: glslify(__dirname + '/glsl/UberShader.vert') },
         uberShaderFrag: { glsl: glslify(__dirname + '/glsl/UberShader.frag') },
-        envMap: { binary: ASSETS_DIR + '/envmaps/pisa_latlong_256.hdr' },
+        reflectionMap: { binary: ASSETS_DIR + '/envmaps/garage.hdr' },
+        irradianceMap: { binary: ASSETS_DIR + '/envmaps/garage_diffuse.hdr' },
     },
     init: function() {
         this.initMeshes();
@@ -96,8 +97,13 @@ Window.create({
         var ctx = this.getContext();
         var res = this.getResources();
 
-        var hdrInfo = parseHdr(res.envMap);
-        var envMap = ctx.createTexture2D(hdrInfo.data, hdrInfo.shape[0], hdrInfo.shape[1], {
+        var reflectionMapInfo = parseHdr(res.reflectionMap);
+        var reflectionMap = ctx.createTexture2D(reflectionMapInfo.data, reflectionMapInfo.shape[0], reflectionMapInfo.shape[1], {
+            type: ctx.FLOAT
+        });
+
+        var irradianceMapInfo = parseHdr(res.irradianceMap);
+        var irradianceMap = ctx.createTexture2D(irradianceMapInfo.data, irradianceMapInfo.shape[0], irradianceMapInfo.shape[1], {
             type: ctx.FLOAT
         });
 
@@ -106,19 +112,42 @@ Window.create({
 
         this.debugDraw = new Draw(ctx);
 
-        materials.push({
+        materials.push(new UberMaterial(ctx, {
             name: 'normals',
-            program: ctx.createProgram(res.showNormalsVert, res.showNormalsFrag)
-        })
+            uReflectionMap: reflectionMap,
+            uIrradianceMap: irradianceMap,
+            showNormals: true
+        }))
 
         materials.push(new UberMaterial(ctx, {
-            uReflectionMap: envMap,
+            name: 'texCoords',
+            uReflectionMap: reflectionMap,
+            uIrradianceMap: irradianceMap,
+            showTexCoords: true
+        }))
+
+        materials.push(new UberMaterial(ctx, {
+            name: 'reflection',
+            uReflectionMap: reflectionMap,
+            uIrradianceMap: irradianceMap,
             useSpecular: true
         }))
 
         materials.push(new UberMaterial(ctx, {
-            uReflectionMap: envMap,
-            useSpecular: false
+            name: 'fresnel',
+            uReflectionMap: reflectionMap,
+            uIrradianceMap: irradianceMap,
+            showFresnel: true
+        }))
+
+        materials.push(new UberMaterial(ctx, {
+            name: 'final color',
+            uReflectionMap: reflectionMap,
+            uIrradianceMap: irradianceMap,
+            uAlbedoColor: [0.6, 0.1, 0.1, 1.0],
+            uAlbedoColorParams: { type: 'color' },
+            uLightColor: [0.6, 0.1, 0.1, 1.0],
+            uLightColorParams: { min: 0, max: 10 }
         }))
     },
     initGUI: function() {
@@ -133,7 +162,7 @@ Window.create({
             for(var unifornName in material.uniforms) {
                 var params = material.uniforms[unifornName + 'Params'];
                 if (params) {
-                    gui.addParam(unifornName, material.uniforms, unifornName, { min: params.min, max: params.max });
+                    gui.addParam(unifornName, material.uniforms, unifornName, params);
                 }
             }
         })

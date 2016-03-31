@@ -1,20 +1,30 @@
-attribute vec4 aPosition;
+attribute vec3 aPosition;
 attribute vec3 aNormal;
+attribute vec2 aTexCoord0;
 
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 uniform mat4 uModelMatrix;
 uniform mat3 uNormalMatrix;
 
-uniform vec3 uLightPosition;
+uniform vec3 uLightPos;
 
-varying vec3 ecPosition;
-varying vec3 ecNormal;
-varying vec3 ecLightPosition; //this should be computed outside
+varying vec3 vPositionWorld;
+varying vec3 vPositionView;
+varying vec3 vNormalWorld;
+varying vec3 vNormalView;
+varying vec2 vTexCoord;
+
+varying vec3 vLightPosView;
 
 void main() {
-    gl_Position = uProjectionMatrix * uViewMatrix * uModelMatrix * aPosition;
-    ecPosition = vec3(uViewMatrix * uModelMatrix * aPosition);
-    ecLightPosition = vec3(uModelMatrix * vec4(uLightPosition, 1.0));
-    ecNormal = uNormalMatrix * aNormal;
+    vPositionWorld = vec3(uModelMatrix * vec4(aPosition, 1.0));
+    vPositionView = vec3(uViewMatrix * vec4(vPositionWorld, 1.0));
+    vNormalWorld = aNormal; //TODO: this should be transformed by model world matrix
+    vNormalView = vec3(uNormalMatrix * aNormal);
+    vTexCoord = aTexCoord0;
+
+    vLightPosView = vec3(uViewMatrix * vec4(uLightPos, 1.0));
+
+    gl_Position = uProjectionMatrix * vec4(vPositionView, 1.0);
 }
