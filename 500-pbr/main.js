@@ -11,7 +11,9 @@ var parseHdr     = require('../local_modules/parse-hdr');
 var parseDds     = require('parse-dds');
 var isBrowser    = require('is-browser');
 var UberMaterial = require('./UberMaterial');
-
+var renderToCubemap = require('../local_modules/render-to-cubemap');
+var downsampleCubemap = require('../local_modules/downsample-cubemap');
+var convolveCubemap = require('../local_modules/convolve-cubemap')
 function grid(x, y, w, h, nw, nh, margin){
     margin = margin || 0;
     var max =  nw * nh;
@@ -36,7 +38,7 @@ var H = 720;
 
 var ASSETS_DIR = isBrowser ? '../assets' :  __dirname + '/../assets';
 
-var viewports = grid(200, 0, W-200, H, 3, 2);
+var viewports = grid(350, 0, W-350, H, 3, 2);
 var materials = [];
 
 Window.create({
@@ -61,8 +63,8 @@ Window.create({
         uberShaderFrag: { glsl: glslify(__dirname + '/glsl/UberShader.frag') },
         reflectionMap: { binary: ASSETS_DIR + '/envmaps/garage.hdr' },
         irradianceMap: { binary: ASSETS_DIR + '/envmaps/garage_diffuse.hdr' },
-        irradianceCubemap: { binary: ASSETS_DIR + '/envmaps_pmrem_dds/GracieIrradiance.dds' },
-        reflectionCubemap: { binary: ASSETS_DIR + '/envmaps_pmrem_dds/GracieReflection.dds' },
+        irradianceCubemap: { binary: ASSETS_DIR + '/envmaps_pmrem_dds/StPetersIrradiance.dds' },
+        reflectionCubemap: { binary: ASSETS_DIR + '/envmaps_pmrem_dds/StPetersReflection.dds' },
     },
     init: function() {
         this.initMeshes();
@@ -150,6 +152,18 @@ Window.create({
             minFilter: ctx.LINEAR_MIPMAP_NEAREST
         });
 
+        var CUBEMAP_SIZE = 256;
+
+        this.reflectionMap128 = ctx.createTextureCube(null, CUBEMAP_SIZE/2, CUBEMAP_SIZE/2, { type: ctx.FLOAT, minFilter: ctx.NEAREST, magFilter: ctx.NEAREST });
+        this.reflectionMap64 = ctx.createTextureCube(null, CUBEMAP_SIZE/4, CUBEMAP_SIZE/4, { type: ctx.FLOAT, minFilter: ctx.NEAREST, magFilter: ctx.NEAREST });
+        this.reflectionMap32 = ctx.createTextureCube(null, CUBEMAP_SIZE/8, CUBEMAP_SIZE/8, { type: ctx.FLOAT, minFilter: ctx.NEAREST, magFilter: ctx.NEAREST });
+        this.irradianceCubemap32 = ctx.createTextureCube(null, CUBEMAP_SIZE/16, CUBEMAP_SIZE/16, { type: ctx.FLOAT });
+
+        downsampleCubemap(ctx, this.reflectionCubemap,this.reflectionMap128);
+        downsampleCubemap(ctx, this.reflectionMap128, this.reflectionMap64);
+        downsampleCubemap(ctx, this.reflectionMap64,  this.reflectionMap32);
+        convolveCubemap(ctx,   this.reflectionMap32,  this.irradianceCubemap32);
+
         this.showColorsProgram = ctx.createProgram(res.showColorsVert, res.showColorsFrag)
         this.skyboxProgram = ctx.createProgram(res.skyboxVert, res.skyboxFrag)
 
@@ -157,35 +171,35 @@ Window.create({
 
         materials.push(new UberMaterial(ctx, {
             name: 'normals',
-            uIrradianceMap: irradianceCubemap,
+            uIrradianceMap: this.irradianceCubemap32,
             uReflectionMap: reflectionCubemap,
             showNormals: true
         }))
 
         materials.push(new UberMaterial(ctx, {
             name: 'texCoords',
-            uIrradianceMap: irradianceCubemap,
+            uIrradianceMap: this.irradianceCubemap32,
             uReflectionMap: reflectionCubemap,
             showTexCoords: true
         }))
 
         materials.push(new UberMaterial(ctx, {
             name: 'reflection',
-            uIrradianceMap: irradianceCubemap,
+            uIrradianceMap: this.irradianceCubemap32,
             uReflectionMap: reflectionCubemap,
             useSpecular: true
         }))
 
         materials.push(new UberMaterial(ctx, {
             name: 'fresnel',
-            uIrradianceMap: irradianceCubemap,
+            uIrradianceMap: this.irradianceCubemap32,
             uReflectionMap: reflectionCubemap,
             showFresnel: true
         }))
 
         materials.push(new UberMaterial(ctx, {
             name: 'final color',
-            uIrradianceMap: irradianceCubemap,
+            uIrradianceMap: this.irradianceCubemap32,
             uReflectionMap: reflectionCubemap,
             uAlbedoColor: [0.6, 0.1, 0.1, 1.0],
             uAlbedoColorParams: { type: 'color' },
@@ -202,6 +216,11 @@ Window.create({
         this.gui.addTexture2D('Reflection Map', this.reflectionMap)
         this.gui.addTexture2D('Irradiance Map', this.irradianceMap)
         this.gui.addTextureCube('Reflection CubeMap', this.reflectionCubemap)
+        this.gui.addTextureCube('Reflection Map 128 ', this.reflectionMap128).setPosition(180, 10)
+        this.gui.addTextureCube('Reflection Map 64 ', this.reflectionMap64)
+        this.gui.addTextureCube('Reflection Map 32 ', this.reflectionMap32)
+        this.gui.addTextureCube('Irradiance CubeMap ', this.irradianceCubemap32)
+        this.gui.addTextureCube('Irradiance CubeMap v2', this.irradianceCubemap32)
         this.gui.addTextureCube('Irradiance CubeMap', this.irradianceCubemap)
 
         materials.forEach(function(material, i) {
