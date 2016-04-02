@@ -13,7 +13,9 @@ var isBrowser    = require('is-browser');
 var UberMaterial = require('./UberMaterial');
 var renderToCubemap = require('../local_modules/render-to-cubemap');
 var downsampleCubemap = require('../local_modules/downsample-cubemap');
-var convolveCubemap = require('../local_modules/convolve-cubemap')
+var convolveCubemap = require('../local_modules/convolve-cubemap');
+var envmapToCubemap = require('../local_modules/envmap-to-cubemap');
+
 function grid(x, y, w, h, nw, nh, margin){
     margin = margin || 0;
     var max =  nw * nh;
@@ -107,6 +109,11 @@ Window.create({
             type: ctx.FLOAT
         });
 
+        var reflectionMapInfo = parseHdr(res.reflectionMap);
+        var reflectionMap = this.reflectionMap = ctx.createTexture2D(reflectionMapInfo.data, reflectionMapInfo.shape[0], reflectionMapInfo.shape[1], {
+            type: ctx.FLOAT
+        });
+
         var irradianceCubemapInfo = parseDds(res.irradianceCubemap);
         var numMipmapLevels = irradianceCubemapInfo.images.length / 6;
         var faces = [];
@@ -126,11 +133,7 @@ Window.create({
             type: ctx.FLOAT
         });
 
-        var reflectionMapInfo = parseHdr(res.reflectionMap);
-        var reflectionMap = this.reflectionMap = ctx.createTexture2D(reflectionMapInfo.data, reflectionMapInfo.shape[0], reflectionMapInfo.shape[1], {
-            type: ctx.FLOAT
-        });
-
+        //TODO: remove this loading code, always go from envmap?
         var reflectionCubemapInfo = parseDds(res.reflectionCubemap);
         var numMipmapLevels = reflectionCubemapInfo.images.length / 6;
         var faces = [];
@@ -152,17 +155,24 @@ Window.create({
             minFilter: ctx.LINEAR_MIPMAP_NEAREST
         });
 
+
+
         var CUBEMAP_SIZE = 256;
 
+        //TODO: seamless cubemap sampling would help...
+        this.reflectionCubemap = ctx.createTextureCube(null, CUBEMAP_SIZE, CUBEMAP_SIZE, { type: ctx.FLOAT, minFilter: ctx.NEAREST, magFilter: ctx.NEAREST });
         this.reflectionMap128 = ctx.createTextureCube(null, CUBEMAP_SIZE/2, CUBEMAP_SIZE/2, { type: ctx.FLOAT, minFilter: ctx.NEAREST, magFilter: ctx.NEAREST });
         this.reflectionMap64 = ctx.createTextureCube(null, CUBEMAP_SIZE/4, CUBEMAP_SIZE/4, { type: ctx.FLOAT, minFilter: ctx.NEAREST, magFilter: ctx.NEAREST });
         this.reflectionMap32 = ctx.createTextureCube(null, CUBEMAP_SIZE/8, CUBEMAP_SIZE/8, { type: ctx.FLOAT, minFilter: ctx.NEAREST, magFilter: ctx.NEAREST });
-        this.irradianceCubemap32 = ctx.createTextureCube(null, CUBEMAP_SIZE/16, CUBEMAP_SIZE/16, { type: ctx.FLOAT });
+        this.reflectionMap16 = ctx.createTextureCube(null, CUBEMAP_SIZE/16, CUBEMAP_SIZE/16, { type: ctx.FLOAT, minFilter: ctx.NEAREST, magFilter: ctx.NEAREST });
+        this.irradianceCubemap = ctx.createTextureCube(null, CUBEMAP_SIZE/16, CUBEMAP_SIZE/16, { type: ctx.FLOAT });
 
-        downsampleCubemap(ctx, this.reflectionCubemap,this.reflectionMap128);
+        envmapToCubemap(ctx, this.reflectionMap, this.reflectionCubemap); //render envmap to cubemap
+        downsampleCubemap(ctx, this.reflectionCubemap, this.reflectionMap128);
         downsampleCubemap(ctx, this.reflectionMap128, this.reflectionMap64);
         downsampleCubemap(ctx, this.reflectionMap64,  this.reflectionMap32);
-        convolveCubemap(ctx,   this.reflectionMap32,  this.irradianceCubemap32);
+        downsampleCubemap(ctx, this.reflectionMap32,  this.reflectionMap16);
+        convolveCubemap(ctx,   this.reflectionMap16,  this.irradianceCubemap);
 
         this.showColorsProgram = ctx.createProgram(res.showColorsVert, res.showColorsFrag)
         this.skyboxProgram = ctx.createProgram(res.skyboxVert, res.skyboxFrag)
@@ -171,36 +181,36 @@ Window.create({
 
         materials.push(new UberMaterial(ctx, {
             name: 'normals',
-            uIrradianceMap: this.irradianceCubemap32,
-            uReflectionMap: reflectionCubemap,
+            uIrradianceMap: this.irradianceCubemap,
+            uReflectionMap: this.reflectionCubemap,
             showNormals: true
         }))
 
         materials.push(new UberMaterial(ctx, {
             name: 'texCoords',
-            uIrradianceMap: this.irradianceCubemap32,
-            uReflectionMap: reflectionCubemap,
+            uIrradianceMap: this.irradianceCubemap,
+            uReflectionMap: this.reflectionCubemap,
             showTexCoords: true
         }))
 
         materials.push(new UberMaterial(ctx, {
             name: 'reflection',
-            uIrradianceMap: this.irradianceCubemap32,
-            uReflectionMap: reflectionCubemap,
+            uIrradianceMap: this.irradianceCubemap,
+            uReflectionMap: this.reflectionCubemap,
             useSpecular: true
         }))
 
         materials.push(new UberMaterial(ctx, {
             name: 'fresnel',
-            uIrradianceMap: this.irradianceCubemap32,
-            uReflectionMap: reflectionCubemap,
+            uIrradianceMap: this.irradianceCubemap,
+            uReflectionMap: this.reflectionCubemap,
             showFresnel: true
         }))
 
         materials.push(new UberMaterial(ctx, {
             name: 'final color',
-            uIrradianceMap: this.irradianceCubemap32,
-            uReflectionMap: reflectionCubemap,
+            uIrradianceMap: this.irradianceCubemap,
+            uReflectionMap: this.reflectionCubemap,
             uAlbedoColor: [0.6, 0.1, 0.1, 1.0],
             uAlbedoColorParams: { type: 'color' },
             uLightColor: [1, 1, 1, 1.0],
@@ -214,14 +224,11 @@ Window.create({
         this.addEventListener(gui)
 
         this.gui.addTexture2D('Reflection Map', this.reflectionMap)
-        this.gui.addTexture2D('Irradiance Map', this.irradianceMap)
-        this.gui.addTextureCube('Reflection CubeMap', this.reflectionCubemap)
-        this.gui.addTextureCube('Reflection Map 128 ', this.reflectionMap128).setPosition(180, 10)
-        this.gui.addTextureCube('Reflection Map 64 ', this.reflectionMap64)
-        this.gui.addTextureCube('Reflection Map 32 ', this.reflectionMap32)
-        this.gui.addTextureCube('Irradiance CubeMap ', this.irradianceCubemap32)
-        this.gui.addTextureCube('Irradiance CubeMap v2', this.irradianceCubemap32)
+        this.gui.addTextureCube('Reflection Map 128', this.reflectionMap128)
+        this.gui.addTextureCube('Reflection Map 64', this.reflectionMap64)
+        this.gui.addTextureCube('Reflection Map 32', this.reflectionMap32)
         this.gui.addTextureCube('Irradiance CubeMap', this.irradianceCubemap)
+        this.gui.addTexture2D('Irradiance Map', this.irradianceMap)
 
         materials.forEach(function(material, i) {
             var viewport = viewports[i];
