@@ -76,11 +76,114 @@ float phong(vec3 lightDir, vec3 eyeDir, vec3 normal) {
     return dot(R, eyeDir);
 }
 
-float getLightSpecular(inout FragData data) {
-    float glossiness = 1.0 - data.roughness;
-    float specPower = pow(2.0, glossiness * 11.0);
+//Based on Coding Labs and Graphics Rants
+float chiGGX(float v) {
+    return v > 0 ? 1 : 0;
+}
 
-    return pow(max(0.0, phong(data.lightDirView, data.eyeDirView, data.normalView)), specPower);
+float saturate(float f) {
+    return clamp(f, 0.0, 1.0);
+}
+
+//Based on Coding Labs and Graphics Rants
+float GGX_Distribution(vec3 n, vec3 h, float alpha) {
+    float NoH = dot(n,h);
+    float alpha2 = alpha * alpha;
+    float NoH2 = NoH * NoH;
+    float den = NoH2 * alpha2 + (1.0 - NoH2);
+    //chiGGX removed to follow Graphics Rants, will get away with NdotL anyway
+    //return (chiGGX(NoH) * alpha2) / ( PI * den * den );
+    return (alpha2) / ( PI * den * den );
+}
+
+//TODO: doesn't seem to work / do anything
+//Based on Coding Labs
+float GGX_PartialGeometryTerm(vec3 v, vec3 n, vec3 h, float alpha)
+{
+    float VoH2 = saturate(dot(v,h));
+    float chi = chiGGX( VoH2 / saturate(dot(v,n)) );
+    VoH2 = VoH2 * VoH2;
+    float tan2 = ( 1 - VoH2 ) / VoH2;
+    //return chi / (1 + tan2);
+    //return ( 1 + sqrt( 1 + alpha * alpha * tan2 ));
+    return (chi * 2) / ( 1 + sqrt( 1 + alpha * alpha * tan2 ) );
+}
+
+vec3 Fresnel_Schlick(float cosT, vec3 F0)
+{
+  return F0 + (1-F0) * pow( 1 - cosT, 5);
+}
+
+/*
+float3 GGX_Specular( TextureCube SpecularEnvmap, float3 normal, float3 viewVector, float roughness, float3 F0, out float3 kS )
+{
+     float3 reflectionVector = reflect(-viewVector, normal);
+     float3x3 worldFrame = GenerateFrame(reflectionVector);
+     float3 radiance = 0;
+     float  NoV = saturate(dot(normal, viewVector));
+     for(int i = 0; i < SamplesCount; ++i)
+     {
+         // Generate a sample vector in some local space
+         float3 sampleVector = GenerateGGXsampleVector(i, SamplesCount, roughness);
+         // Convert the vector in world space
+         sampleVector = normalize( mul( sampleVector, worldFrame ) );
+         // Calculate the half vector
+         float3 halfVector = normalize(sampleVector + viewVector);
+         float cosT = saturatedDot( sampleVector, normal );
+         float sinT = sqrt( 1 - cosT * cosT);
+         // Calculate fresnel
+         float3 fresnel = Fresnel_Schlick( saturate(dot( halfVector, viewVector )), F0 );
+         // Geometry term
+         float geometry = GGX_PartialGeometryTerm(viewVector, normal, halfVector, roughness) * GGX_PartialGeometryTerm(sampleVector, normal, halfVector, roughness);
+         // Calculate the Cook-Torrance denominator
+         float denominator = saturate( 4 * (NoV * saturate(dot(halfVector, normal)) + 0.05) );
+         kS += fresnel;
+         // Accumulate the radiance
+         radiance += SpecularEnvmap.SampleLevel( trilinearSampler, sampleVector, ( roughness * mipsCount ) ).rgb * geometry * fresnel * sinT / denominator;
+}
+     // Scale back for the samples count
+     kS = saturate( kS / SamplesCount );
+     return radiance / SamplesCount;
+}
+
+ */
+float getLightSpecular(inout FragData data) {
+    float ior = 1.0 + data.roughness;
+    vec3 F0 = vec3(abs((1.0 - ior) / (1.0 + ior)));
+    F0 = F0 * F0;
+    F0 = mix(F0, data.albedo, data.metalness);
+
+    float alpha = data.roughness * data.roughness;
+    vec3 n = data.normalWorld;
+    vec3 l = normalize(data.lightDirWorld);
+    vec3 v = normalize(data.eyeDirWorld);
+    vec3 h = normalize(v + l);
+    float NdotL = saturate(dot(n, l));
+    float HdotV = saturate(dot(h, v));
+    float NoV = saturate(dot(n, v));
+    float NoL = saturate(dot(n, l));
+    float NoH = saturate(dot(n, h));
+    float D = GGX_Distribution(n, h, alpha);
+    float G = GGX_PartialGeometryTerm(v, n, h, alpha);
+    float f = Fresnel_Schlick(dot(h, v), F0).r;
+    //float denom = saturate( 4 * (NoV * NoL + 0.01) );
+    float denom = saturate( 4 * (NoV * NoH + 0.01) );
+
+    //float base = 1 - dot(v,h);
+    //float exponential = pow( base, 5.0);
+    //f = (exponential + F0.r * (1.0 - exponential));
+
+    vec3 sampleVector = v;
+    vec3 halfVector = normalize(sampleVector + v);
+    float cosT = saturate(dot( sampleVector, n ));
+    float sinT = sqrt( 1 - cosT * cosT);
+    vec3 fresnel = Fresnel_Schlick( saturate(dot( h, v )), F0 );
+    float geometry = GGX_PartialGeometryTerm(v, n, h, data.roughness) * GGX_PartialGeometryTerm(sampleVector, n, h, data.roughness);
+    float denominator = saturate( 4 * (NoV * saturate(dot(h, n)) + 0.05) );
+    //return 1 / denom;
+    return f;
+    return NdotL * D * f * G / denom;
+    //return NdotL * geometry * fresnel.r * sinT / denominator;
 }
 
 uniform float uRoughness;
@@ -203,6 +306,45 @@ void main() {
     data.color += mix(lightDiffuse, lightSpecular, data.specularity);
 
     data.color += data.specularity * data.reflectionColor;//TODO: is specular reflection shadowed by NdotL?
+
+    //TMP data.color = data.irradianceColor;
+    data.color = vec3(getLightSpecular(data));
+    //vec3 l = normalize(reflect(-data.eyeDirView, data.normalView));
+    //vec3 h = normalize(data.eyeDirView + l);
+    vec3 n = data.normalView;
+    vec3 l = normalize(data.lightDirView);
+    vec3 v = normalize(data.eyeDirView);
+    vec3 h = normalize(v + l);
+    float ior = 1.0 + data.metalness;
+    vec3 F0 = vec3(abs((1.0 - ior) / (1.0 + ior)));
+    F0 = F0 * F0;
+    float VdotH = saturate(dot(v, h));
+    float NdotL = saturate(dot(n, l));
+    float NdotH = saturate(dot(n, h));
+    float NdotV = saturate(dot(n, v));
+    data.color = data.reflectionColor * NdotL * Fresnel_Schlick(VdotH, F0);
+    float alpha = data.roughness * data.roughness;
+    float D = GGX_Distribution(n, h, alpha);
+    float G = GGX_PartialGeometryTerm(v, n, h, alpha);
+    vec3 F = Fresnel_Schlick(VdotH, F0); //VdotH
+    float denom = saturate( 4 * (NdotV * NdotH + 0.01) );
+    data.color = NdotL * D * G * F / denom;
+    //data.color = Fresnel_Schlick(saturate(dot(n,l)), F0);
+    //data.color = vec3(VdotH);
+    //
+    vec3 rl = normalize(reflect(-data.eyeDirView, data.normalView));
+    vec3 rh = normalize(v + rl);
+    float VdotRH = saturate(dot(v, rh));
+    float NdotRH = saturate(dot(v, rh));
+    float NdotRL = saturate(dot(n, rl));
+    float rD = GGX_Distribution(n, rh, alpha);
+    float rG = GGX_PartialGeometryTerm(v, n, rh, alpha);
+    //vec3 rF = Fresnel_Schlick(NdotV, F0);
+    vec3 rF = Fresnel_Schlick(VdotRH, F0);
+    float rdenom = ( 4 * (NdotV * NdotRH + 0.01) );
+    data.color = data.reflectionColor * rF;
+    //data.color = NdotRL * rD * rG * rF / rdenom;
+    //data.color = data.reflectionColor * getFresnel(data);
 
     data.color *= uExposure;
 
