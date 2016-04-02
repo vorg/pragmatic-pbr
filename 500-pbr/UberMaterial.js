@@ -25,7 +25,8 @@ function UberShader(ctx, uniforms) {
         uAlbedoColor: [0,0,0,1],
         uLightColor: [1,1,1,1],
         useSpecular: true,
-        useTonemap: true
+        useTonemap: true,
+        uIor: 1.4
 
     }, uniforms || {})
 

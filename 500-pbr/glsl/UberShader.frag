@@ -19,6 +19,7 @@ precision highp float;
 
 uniform mat4 uInverseViewMatrix;
 uniform float uExposure;
+uniform float uIor;
 
 uniform vec3 uLightPos;
 uniform vec4 uLightColor;
@@ -148,7 +149,7 @@ float3 GGX_Specular( TextureCube SpecularEnvmap, float3 normal, float3 viewVecto
 
  */
 float getLightSpecular(inout FragData data) {
-    float ior = 1.0 + data.roughness;
+    float ior = uIor;
     vec3 F0 = vec3(abs((1.0 - ior) / (1.0 + ior)));
     F0 = F0 * F0;
     F0 = mix(F0, data.albedo, data.metalness);
@@ -315,7 +316,7 @@ void main() {
     vec3 l = normalize(data.lightDirView);
     vec3 v = normalize(data.eyeDirView);
     vec3 h = normalize(v + l);
-    float ior = 1.0 + data.metalness;
+    float ior = uIor;
     vec3 F0 = vec3(abs((1.0 - ior) / (1.0 + ior)));
     F0 = F0 * F0;
     float VdotH = saturate(dot(v, h));

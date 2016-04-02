@@ -52,6 +52,7 @@ var materials = [];
 
 var State = {
     roughness: 0.5,
+    ior: 1.4,
     exposure: 1
 }
 
@@ -77,8 +78,8 @@ Window.create({
         uberShaderFrag: { glsl: glslify(__dirname + '/glsl/UberShader.frag') },
         reflectionMap: { binary: ASSETS_DIR + '/envmaps/garage.hdr' },
         irradianceMap: { binary: ASSETS_DIR + '/envmaps/garage_diffuse.hdr' },
-        irradianceCubemap: { binary: ASSETS_DIR + '/envmaps_pmrem_dds/StPetersIrradiance.dds' },
-        reflectionCubemap: { binary: ASSETS_DIR + '/envmaps_pmrem_dds/StPetersReflection.dds' },
+        irradianceCubemap: { binary: ASSETS_DIR + '/envmaps_pmrem_dds/StPetersIrradiance.dds' }, //TEMP
+        reflectionCubemap: { binary: ASSETS_DIR + '/envmaps_pmrem_dds/StPetersReflection.dds' }, //TEMP
         blob: { text: ASSETS_DIR + '/models/blob.obj' },
         dragon: { text: ASSETS_DIR + '/models/dragon.obj' }
     },
@@ -150,6 +151,7 @@ Window.create({
             type: ctx.FLOAT
         });
 
+        //TEMP
         var irradianceCubemapInfo = parseDds(res.irradianceCubemap);
         var numMipmapLevels = irradianceCubemapInfo.images.length / 6;
         var faces = [];
@@ -169,6 +171,7 @@ Window.create({
             type: ctx.FLOAT
         });
 
+        //TEMP
         //TODO: remove this loading code, always go from envmap?
         var reflectionCubemapInfo = parseDds(res.reflectionCubemap);
         var numMipmapLevels = reflectionCubemapInfo.images.length / 6;
@@ -263,6 +266,12 @@ Window.create({
         this.gui.addParam('roughness', State, 'roughness', { min: 0, max: 1}, function(value) {
             materials.forEach(function(material, i) {
                 material.uniforms.uRoughness = value;
+            })
+        })
+
+        this.gui.addParam('ior', State, 'ior', { min: 1, max: 5}, function(value) {
+            materials.forEach(function(material, i) {
+                material.uniforms.uIor = value;
             })
         })
 
