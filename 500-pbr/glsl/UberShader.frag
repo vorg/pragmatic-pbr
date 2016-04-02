@@ -86,6 +86,10 @@ float saturate(float f) {
     return clamp(f, 0.0, 1.0);
 }
 
+vec3 saturate(vec3 v) {
+    return clamp(v, vec3(0.0), vec3(1.0));
+}
+
 //Based on Coding Labs and Graphics Rants
 float GGX_Distribution(vec3 n, vec3 h, float alpha) {
     float NoH = dot(n,h);
@@ -115,39 +119,6 @@ vec3 Fresnel_Schlick(float cosT, vec3 F0)
   return F0 + (1-F0) * pow( 1 - cosT, 5);
 }
 
-/*
-float3 GGX_Specular( TextureCube SpecularEnvmap, float3 normal, float3 viewVector, float roughness, float3 F0, out float3 kS )
-{
-     float3 reflectionVector = reflect(-viewVector, normal);
-     float3x3 worldFrame = GenerateFrame(reflectionVector);
-     float3 radiance = 0;
-     float  NoV = saturate(dot(normal, viewVector));
-     for(int i = 0; i < SamplesCount; ++i)
-     {
-         // Generate a sample vector in some local space
-         float3 sampleVector = GenerateGGXsampleVector(i, SamplesCount, roughness);
-         // Convert the vector in world space
-         sampleVector = normalize( mul( sampleVector, worldFrame ) );
-         // Calculate the half vector
-         float3 halfVector = normalize(sampleVector + viewVector);
-         float cosT = saturatedDot( sampleVector, normal );
-         float sinT = sqrt( 1 - cosT * cosT);
-         // Calculate fresnel
-         float3 fresnel = Fresnel_Schlick( saturate(dot( halfVector, viewVector )), F0 );
-         // Geometry term
-         float geometry = GGX_PartialGeometryTerm(viewVector, normal, halfVector, roughness) * GGX_PartialGeometryTerm(sampleVector, normal, halfVector, roughness);
-         // Calculate the Cook-Torrance denominator
-         float denominator = saturate( 4 * (NoV * saturate(dot(halfVector, normal)) + 0.05) );
-         kS += fresnel;
-         // Accumulate the radiance
-         radiance += SpecularEnvmap.SampleLevel( trilinearSampler, sampleVector, ( roughness * mipsCount ) ).rgb * geometry * fresnel * sinT / denominator;
-}
-     // Scale back for the samples count
-     kS = saturate( kS / SamplesCount );
-     return radiance / SamplesCount;
-}
-
- */
 float getLightSpecular(inout FragData data) {
     float ior = uIor;
     vec3 F0 = vec3(abs((1.0 - ior) / (1.0 + ior)));
@@ -254,7 +225,7 @@ vec3 getFresnel(inout FragData data) {
     }
 #endif
 
-void main() {
+void mainOld() {
     FragData data;
     data.color = vec3(0.0);
     data.albedo = vec3(0.0);
@@ -282,6 +253,7 @@ void main() {
     data.metalness = getMetalness(data);
 
     //TODO: figure out specularity color for diaelectricts with small metalness
+    //Specularity aka F0
     data.specularity = toLinear(vec3(0.04)); //TODO: 0.04 = plastic, is this gamma or linear?
     if (data.metalness == 1.0) {
         data.specularity = data.albedo;
@@ -292,6 +264,9 @@ void main() {
 
     vec3 fresnel = getFresnel(data);
     data.specularity += fresnel;
+
+    gl_FragColor = vec4(data.specularity, 1.0);
+    return;
 
     vec3 lightDiffuse = data.lightAtten * data.albedo * uLightColor.rgb; //TODO: remove albedo from here?
     vec3 lightSpecular = getLightSpecular(data) * uLightColor.rgb;
@@ -362,6 +337,128 @@ void main() {
 
     #ifdef SHOW_FRESNEL
         data.color = rF * data.reflectionColor;
+    #endif
+
+    #ifdef SHOW_IRRADIANCE
+        data.color = data.irradianceColor;
+    #endif
+
+    #ifdef SHOW_INDIRECT_SPECULAR
+        data.color = indirectSpecular;
+    #endif
+
+    #ifdef USE_TONEMAP
+        data.color = tonemapUncharted2(data.color);
+    #endif
+
+    data.color = toGamma(data.color);
+
+    gl_FragColor.rgb = data.color;
+    gl_FragColor.a = data.opacity;
+}
+
+const int SamplesCount = 64;
+
+mat3 GenerateFrame(vec3 N) {
+    return mat3(1.0);
+}
+
+vec3 GenerateGGXsampleVector(int i, int SamplesCount, float roughness) {
+    return vec3(0.0);
+}
+
+vec3 GGX_Specular(samplerCube SpecularEnvmap, vec3 normal, vec3 viewVector, float roughness, vec3 F0, out vec3 kS ) {
+    vec3 reflectionVector = reflect(-viewVector, normal);
+    mat3 worldFrame = GenerateFrame(reflectionVector);
+    vec3 radiance = vec3(0.0);
+    float  NoV = saturate(dot(normal, viewVector));
+
+    for(int i = 0; i < SamplesCount; ++i) {
+        // Generate a sample vector in some local space
+        vec3 sampleVector = GenerateGGXsampleVector(i, SamplesCount, roughness);
+        // Convert the vector in world space
+        sampleVector = normalize( worldFrame * sampleVector);
+
+        // Calculate the half vector
+        vec3 halfVector = normalize(sampleVector + viewVector);
+        float cosT = saturate( dot(sampleVector, normal ));
+        float sinT = sqrt( 1 - cosT * cosT);
+
+        // Calculate fresnel
+        vec3 fresnel = Fresnel_Schlick(saturate(dot( halfVector, viewVector )), F0 );
+        // Geometry term
+        float geometry = GGX_PartialGeometryTerm(viewVector, normal, halfVector, roughness) * GGX_PartialGeometryTerm(sampleVector, normal, halfVector, roughness);
+        // Calculate the Cook-Torrance denominator
+        float denominator = saturate( 4 * (NoV * saturate(dot(halfVector, normal)) + 0.05) );
+        kS += fresnel;
+        // Accumulate the radiance
+        radiance += 0.0;//radiance += SpecularEnvmap.SampleLevel( trilinearSampler, sampleVector, ( roughness * mipsCount ) ).rgb * geometry * fresnel * sinT / denominator;
+    }
+
+    // Scale back for the samples count
+    kS = saturate( kS / SamplesCount );
+    return radiance / SamplesCount;
+}
+
+void main() {
+    FragData data;
+    data.color = vec3(0.0);
+    data.albedo = vec3(0.0);
+    data.opacity = 1.0;
+    data.positionWorld = vPositionWorld;
+    data.positionView = vPositionView;
+    data.normalWorld = normalize(vNormalWorld);
+    data.normalView = normalize(vNormalView);
+    data.texCoord = vTexCoord;
+    data.eyePosView = vec3(0.0, 0.0, 0.0);
+    data.eyeDirView = normalize(data.eyePosView - data.positionView);
+    data.eyeDirWorld = vec3(uInverseViewMatrix * vec4(data.eyeDirView, 0.0));
+    data.lightAtten = 1.0;
+    data.lightColor = toLinear(uLightColor.rgb);
+    data.lightPosWorld = uLightPos;
+    data.lightPosView = vLightPosView;
+    data.lightDirWorld = normalize(data.lightPosWorld - data.positionWorld);
+    data.lightDirView = normalize(data.lightPosView - data.positionView);
+    data.reflectionColor = vec3(0.0);
+    data.exposure = uExposure;
+
+    data.albedo = getAlbedo(data);
+    data.roughness = getRoughness(data);
+    data.metalness = getMetalness(data);
+    data.irradianceColor = getIrradiance(data);
+    data.reflectionColor = getReflection(data);
+
+    float ior = uIor;
+
+    // Calculate the diffuse contribution
+    vec3 diffuse = data.albedo * data.irradianceColor;
+
+    // Calculate colour at normal incidence
+    vec3 F0 = vec3(abs((1.0 - ior) / (1.0 + ior)));
+    F0 = F0 * F0;
+    F0 = mix(F0, data.albedo, data.metalness);
+
+    // Calculate the specular contribution
+    vec3 ks = vec3(0.0);
+    vec3 specular = GGX_Specular(uReflectionMap, data.normalView, data.eyeDirView, data.roughness, F0, ks);
+
+    //energy conservation kd + ks <= 1
+    //also making sure that for metalness = 1, kd = 0
+    vec3 kd = (1.0 - ks) * (1.0 - data.metalness);
+
+    data.color = kd * diffuse + /*ks **/ specular;
+
+
+    #ifdef SHOW_NORMALS
+        data.color = data.normalWorld * 0.5 + 0.5;
+    #endif
+
+    #ifdef SHOW_TEX_COORDS
+        data.color = vec3(data.texCoord, 0.0);
+    #endif
+
+    #ifdef SHOW_FRESNEL
+        //data.color = rF * data.reflectionColor;
     #endif
 
     #ifdef SHOW_IRRADIANCE

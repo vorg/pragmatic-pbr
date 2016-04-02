@@ -52,6 +52,7 @@ var materials = [];
 
 var State = {
     roughness: 0.5,
+    metalness: 0,
     ior: 1.4,
     exposure: 1
 }
@@ -228,7 +229,6 @@ Window.create({
             uLightColorParams: { min: 0, max: 10 },
             showIrradiance: true
         }))
-
         materials.push(new UberMaterial(ctx, {
             name: 'fresnel',
             uIrradianceMap: this.irradianceCubemap,
@@ -266,6 +266,12 @@ Window.create({
         this.gui.addParam('roughness', State, 'roughness', { min: 0, max: 1}, function(value) {
             materials.forEach(function(material, i) {
                 material.uniforms.uRoughness = value;
+            })
+        })
+
+        this.gui.addParam('metalness', State, 'metalness', { min: 0, max: 1}, function(value) {
+            materials.forEach(function(material, i) {
+                material.uniforms.uMetalness = value;
             })
         })
 
