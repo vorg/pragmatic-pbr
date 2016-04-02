@@ -3,15 +3,18 @@
 
 var Vec3 = require('pex-math/Vec3');
 
-function computeNormals(geometry, out) {
-    var vertices = geometry.positions;
-    var faces = geometry.cells;
+//Compute normals for the mesh based on faces/cells information
+//If there are two vertices with the same position but different index there will be discontinuity (hard edge)
+function computeNormals(positions, cells, out) {
+    var vertices = positions;
+    var faces = cells;
     var normals = out || [];
 
     var count = [];
     var ab = [0, 0, 0];
     var ac = [0, 0, 0];
     var n  = [0, 0, 0];
+
 
     for(var fi=0, numFaces=faces.length; fi<numFaces; fi++) {
         var f = faces[fi];
