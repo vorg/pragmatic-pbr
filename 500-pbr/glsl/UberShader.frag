@@ -328,7 +328,8 @@ void main() {
     float G = GGX_PartialGeometryTerm(v, n, h, alpha);
     vec3 F = Fresnel_Schlick(VdotH, F0); //VdotH
     float denom = saturate( 4 * (NdotV * NdotH + 0.01) );
-    data.color = NdotL * D * G * F / denom;
+    vec3 indirectSpecular = NdotL * D * G * F / denom;
+    data.color = indirectSpecular;
     //data.color = Fresnel_Schlick(saturate(dot(n,l)), F0);
     //data.color = vec3(VdotH);
     //
@@ -342,34 +343,41 @@ void main() {
     //vec3 rF = Fresnel_Schlick(NdotV, F0);
     vec3 rF = Fresnel_Schlick(VdotRH, F0);
     float rdenom = ( 4 * (NdotV * NdotRH + 0.01) );
-    data.color = data.reflectionColor * rF;
+    //data.color = data.reflectionColor * rF;
     //data.color = NdotRL * rD * rG * rF / rdenom;
     //data.color = data.reflectionColor * getFresnel(data);
+    data.color *= data.reflectionColor;
 
     data.color *= uExposure;
 
-#ifdef USE_TONEMAP
-    data.color = tonemapUncharted2(data.color);
-#endif
+
+    #ifdef SHOW_NORMALS
+        data.color = data.normalWorld * 0.5 + 0.5;
+    #endif
+
+    #ifdef SHOW_TEX_COORDS
+        data.color = vec3(data.texCoord, 0.0);
+    #endif
+
+    #ifdef SHOW_FRESNEL
+        data.color = rF * data.reflectionColor;
+    #endif
+
+    #ifdef SHOW_IRRADIANCE
+        data.color = data.irradianceColor;
+    #endif
+
+    #ifdef SHOW_INDIRECT_SPECULAR
+        data.color = indirectSpecular;
+    #endif
+
+    #ifdef USE_TONEMAP
+        data.color = tonemapUncharted2(data.color);
+    #endif
 
     data.color = toGamma(data.color);
 
     gl_FragColor.rgb = data.color;
     gl_FragColor.a = data.opacity;
 
-    #ifdef SHOW_NORMALS
-        gl_FragColor.rgb = data.normalWorld * 0.5 + 0.5;
-    #endif
-
-    #ifdef SHOW_TEX_COORDS
-        gl_FragColor.rgb = vec3(data.texCoord, 0.0);
-    #endif
-
-    #ifdef SHOW_FRESNEL
-        gl_FragColor.rgb = fresnel;
-    #endif
-/*
-    gl_FragColor.rgb = lightDiffuse;
-
-*/
 }

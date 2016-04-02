@@ -1,5 +1,6 @@
 var Window       = require('pex-sys/Window');
 var createSphere = require('primitive-sphere');
+var createCube = require('primitive-cube');
 var PerspCamera  = require('pex-cam/PerspCamera');
 var Arcball      = require('pex-cam/Arcball');
 var Draw         = require('pex-draw');
@@ -15,6 +16,11 @@ var renderToCubemap = require('../local_modules/render-to-cubemap');
 var downsampleCubemap = require('../local_modules/downsample-cubemap');
 var convolveCubemap = require('../local_modules/convolve-cubemap');
 var envmapToCubemap = require('../local_modules/envmap-to-cubemap');
+var parseObj = require('../local_modules/geom-parse-obj/');
+var computeNormals = require('../local_modules/geom-compute-normals/')
+var centerAndResize = require('../local_modules/geom-center-and-resize/');
+var Vec3 = require('pex-math/Vec3');
+
 
 function grid(x, y, w, h, nw, nh, margin){
     margin = margin || 0;
@@ -35,18 +41,24 @@ function grid(x, y, w, h, nw, nh, margin){
     return cells;
 }
 
-var W = 1280;
-var H = 720;
+var W = 800;
+var H = 1000;
 
 var ASSETS_DIR = isBrowser ? '../assets' :  __dirname + '/../assets';
 
-var viewports = grid(350, 0, W-350, H, 3, 2);
+var viewports = grid(180, 0, W-180, H, 1, 3);
 var materials = [];
+
+
+var State = {
+    roughness: 0.5,
+    exposure: 1
+}
 
 Window.create({
     settings: {
-        width: 1280,
-        height: 720
+        width: W,
+        height: H
     },
     resources: {
         skyboxVert: { glsl: glslify(__dirname + '/glsl/SkyboxQuad.vert') },
@@ -67,6 +79,8 @@ Window.create({
         irradianceMap: { binary: ASSETS_DIR + '/envmaps/garage_diffuse.hdr' },
         irradianceCubemap: { binary: ASSETS_DIR + '/envmaps_pmrem_dds/StPetersIrradiance.dds' },
         reflectionCubemap: { binary: ASSETS_DIR + '/envmaps_pmrem_dds/StPetersReflection.dds' },
+        blob: { text: ASSETS_DIR + '/models/blob.obj' },
+        dragon: { text: ASSETS_DIR + '/models/dragon.obj' }
     },
     init: function() {
         this.initMeshes();
@@ -76,14 +90,15 @@ Window.create({
     },
     initCamera: function() {
         this.camera = new PerspCamera(45, viewports[0][2] / viewports[0][3], 0.1, 100);
-        this.camera.lookAt([4, 0.5, -4], [0, 0, 0], [0, 1, 0]);
+        this.camera.lookAt([0, 0.5, 4], [0, 0, 0], [0, 1, 0]);
         this.arcball = new Arcball(this.camera, W, H);
         this.addEventListener(this.arcball);
     },
     initMeshes: function() {
         var ctx = this.getContext();
+        var res = this.getResources();
 
-        var sphere = createSphere();
+        var sphere = createSphere(0.6);
         var attributes = [
             { data: sphere.positions, location: ctx.ATTRIB_POSITION },
             { data: sphere.normals, location: ctx.ATTRIB_NORMAL },
@@ -91,6 +106,27 @@ Window.create({
         ];
         var sphereIndices = { data: sphere.cells, usage: ctx.STATIC_DRAW };
         this.sphereMesh = ctx.createMesh(attributes, sphereIndices, ctx.TRIANGLES);
+
+        var dragonGeom = parseObj(res.dragon);
+        dragonGeom.positions = centerAndResize(dragonGeom.positions, 2);
+        dragonGeom.normals = computeNormals(dragonGeom.positions, dragonGeom.cells)
+        dragonGeom.uvs = dragonGeom.normals;
+        var attributes = [
+            { data: dragonGeom.positions, location: ctx.ATTRIB_POSITION },
+            { data: dragonGeom.normals, location: ctx.ATTRIB_NORMAL },
+            { data: dragonGeom.uvs, location: ctx.ATTRIB_TEX_COORD_0 },
+        ];
+        var dragonIndices = { data: dragonGeom.cells, usage: ctx.STATIC_DRAW };
+        this.dragonMesh = ctx.createMesh(attributes, dragonIndices, ctx.TRIANGLES);
+
+        var blob = parseObj(res.blob);
+        var attributes = [
+            { data: blob.positions, location: ctx.ATTRIB_POSITION },
+            { data: blob.normals, location: ctx.ATTRIB_NORMAL },
+            { data: blob.uvs, location: ctx.ATTRIB_TEX_COORD_0 },
+        ];
+        var blobIndices = { data: blob.cells, usage: ctx.STATIC_DRAW };
+        this.blobMesh = ctx.createMesh(attributes, blobIndices, ctx.TRIANGLES);
 
         var skyboxPositions = [[-1,-1],[1,-1], [1,1],[-1,1]];
         var skyboxFaces = [ [0, 1, 2], [0, 2, 3]];
@@ -180,30 +216,24 @@ Window.create({
         this.debugDraw = new Draw(ctx);
 
         materials.push(new UberMaterial(ctx, {
-            name: 'normals',
-            uIrradianceMap: this.irradianceCubemap,
-            uReflectionMap: this.reflectionCubemap,
-            showNormals: true
-        }))
-
-        materials.push(new UberMaterial(ctx, {
-            name: 'texCoords',
-            uIrradianceMap: this.irradianceCubemap,
-            uReflectionMap: this.reflectionCubemap,
-            showTexCoords: true
-        }))
-
-        materials.push(new UberMaterial(ctx, {
             name: 'reflection',
             uIrradianceMap: this.irradianceCubemap,
             uReflectionMap: this.reflectionCubemap,
-            useSpecular: true
+            uAlbedoColor: [0.6, 0.1, 0.1, 1.0],
+            uAlbedoColorParams: { type: 'color' },
+            uLightColor: [1, 1, 1, 1.0],
+            uLightColorParams: { min: 0, max: 10 },
+            showIrradiance: true
         }))
 
         materials.push(new UberMaterial(ctx, {
             name: 'fresnel',
             uIrradianceMap: this.irradianceCubemap,
             uReflectionMap: this.reflectionCubemap,
+            uAlbedoColor: [0.6, 0.1, 0.1, 1.0],
+            uAlbedoColorParams: { type: 'color' },
+            uLightColor: [1, 1, 1, 1.0],
+            uLightColorParams: { min: 0, max: 10 },
             showFresnel: true
         }))
 
@@ -230,15 +260,16 @@ Window.create({
         this.gui.addTextureCube('Irradiance CubeMap', this.irradianceCubemap)
         this.gui.addTexture2D('Irradiance Map', this.irradianceMap)
 
-        materials.forEach(function(material, i) {
-            var viewport = viewports[i];
-            gui.addHeader(material.name).setPosition(viewport[0] + 2, viewport[1] + 2)
-            for(var unifornName in material.uniforms) {
-                var params = material.uniforms[unifornName + 'Params'];
-                if (params) {
-                    gui.addParam(unifornName, material.uniforms, unifornName, params);
-                }
-            }
+        this.gui.addParam('roughness', State, 'roughness', { min: 0, max: 1}, function(value) {
+            materials.forEach(function(material, i) {
+                material.uniforms.uRoughness = value;
+            })
+        })
+
+        this.gui.addParam('exposure', State, 'exposure', { min: 0, max: 3}, function(value) {
+            materials.forEach(function(material, i) {
+                material.uniforms.uExposure = value;
+            })
         })
     },
     onKeyPress: function(e) {
@@ -265,10 +296,12 @@ Window.create({
 
             ctx.pushState(ctx.VIEWPORT_BIT | ctx.SCISSOR_BIT);
             //flipping Y as viewport starts in bottom left
+            var H = this.getHeight();
             ctx.setViewport(viewport[0], H - viewport[1] - viewport[3], viewport[2], viewport[3])
             ctx.setScissorTest(true)
             ctx.setScissor(viewport[0], H - viewport[1] - viewport[3], viewport[2], viewport[3])
-            ctx.setClearColor(0.1, 0.1, 0.1, 0.0);
+            ctx.setClearColor(0.4, 0.1, 0.1, 0.0);
+            ctx.setClearColor(material.uniforms.uAlbedoColor[0], material.uniforms.uAlbedoColor[1], material.uniforms.uAlbedoColor[2], 0.0);
             ctx.clear(ctx.COLOR_BIT | ctx.DEPTH_BIT);
 
             if (material.uniforms && material.uniforms.uReflectionMap) {
@@ -296,13 +329,36 @@ Window.create({
                 }
             }
 
+            ctx.pushModelMatrix();
+            ctx.translate([-2, 0, 0])
             ctx.bindMesh(this.sphereMesh);
             ctx.drawMesh();
+            ctx.popModelMatrix();
+
+            ctx.pushModelMatrix();
+            ctx.bindMesh(this.dragonMesh);
+            ctx.drawMesh();
+            ctx.popModelMatrix();
+
+            ctx.pushModelMatrix();
+            ctx.translate([ 2, 0, 0])
+            ctx.bindMesh(this.blobMesh);
+            ctx.drawMesh();
+            ctx.popModelMatrix();
+
 
             ctx.bindProgram(this.showColorsProgram);
             dbg.setColor([1,1,1,1])
             dbg.drawGrid(5);
             dbg.drawPivotAxes(2)
+            dbg.setColor([1,1,1,1])
+            var L = Vec3.normalize([10,10,0]);
+            var V = Vec3.normalize(Vec3.copy(this.camera.getPosition()))
+            var H = Vec3.normalize(Vec3.add(Vec3.copy(V), L));
+            dbg.drawVector(Vec3.scale(L, 2));
+            dbg.setColor([1,1,0,1])
+            dbg.drawVector(Vec3.scale(H, 2));
+
 
             ctx.popState(ctx.VIEWPORT_BIT | ctx.SCISSOR_BIT);
         }

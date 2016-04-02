@@ -60,6 +60,12 @@ UberShader.prototype.compile = function() {
     //if (uniforms.useSpecular) {
     //    flags.push('#define USE_SPECULAR');
     //}
+    if (uniforms.uReflectionMap instanceof TextureCube) {
+        flags.push('#define REFLECTION_MAP_CUBE');
+    }
+    if (uniforms.uIrradianceMap instanceof TextureCube) {
+        flags.push('#define IRRADIANCE_MAP_CUBE');
+    }
     if (uniforms.useTonemap) {
         flags.push('#define USE_TONEMAP');
     }
@@ -72,11 +78,11 @@ UberShader.prototype.compile = function() {
     if (uniforms.showFresnel) {
         flags.push('#define SHOW_FRESNEL');
     }
-    if (uniforms.uReflectionMap instanceof TextureCube) {
-        flags.push('#define REFLECTION_MAP_CUBE');
+    if (uniforms.showIrradiance) {
+        flags.push('#define SHOW_IRRADIANCE');
     }
-    if (uniforms.uIrradianceMap instanceof TextureCube) {
-        flags.push('#define IRRADIANCE_MAP_CUBE');
+    if (uniforms.showIndirectSpecular) {
+        flags.push('#define SHOW_INDIRECT_SPECULAR');
     }
     //if (Array.isArray(uniforms.uAlbedo)) {
     //    flags.push('#define ALBEDO_CONST');
