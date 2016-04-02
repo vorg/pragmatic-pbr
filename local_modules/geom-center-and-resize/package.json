@@ -1,0 +1,36 @@
+{
+  "name": "geom-center-and-normalize",
+  "version": "1.0.0",
+  "description": "Centers the geometry and scales it to fill 1x1x1 bounding box",
+  "main": "index.js",
+  "license": "MIT",
+  "author": {
+    "name": "Marcin Ignac",
+    "email": "marcin.ignac@gmail.com",
+    "url": "https://github.com/vorg"
+  },
+  "dependencies": {
+    "clone": "^1.0.2",
+    "pex-geom": "git://github.com/variablestudio/pex-geom",
+    "pex-math": "git://github.com/variablestudio/pex-math"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "node test.js"
+  },
+  "keywords": [
+    "geom",
+    "simplicial",
+    "complex",
+    "3d",
+    "webgl"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/vorg/geom-center-and-scale.git"
+  },
+  "homepage": "https://github.com/vorg/geom-center-and-scale",
+  "bugs": {
+    "url": "https://github.com/vorg/geom-center-and-scale/issues"
+  }
+}
