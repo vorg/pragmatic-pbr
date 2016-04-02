@@ -20,7 +20,7 @@ var parseObj = require('../local_modules/geom-parse-obj/');
 var computeNormals = require('../local_modules/geom-compute-normals/')
 var centerAndResize = require('../local_modules/geom-center-and-resize/');
 var Vec3 = require('pex-math/Vec3');
-
+var hammersley   = require('hammersley');
 
 function grid(x, y, w, h, nw, nh, margin){
     margin = margin || 0;
@@ -54,7 +54,8 @@ var State = {
     roughness: 0.5,
     metalness: 0,
     ior: 1.4,
-    exposure: 1
+    exposure: 1,
+    albedo: [1.0, 0.86, 0.57, 1.0]
 }
 
 Window.create({
@@ -77,7 +78,7 @@ Window.create({
         specularCookTorranceFrag: { glsl: glslify(__dirname + '/glsl/SpecularCookTorrance.frag') },
         uberShaderVert: { glsl: glslify(__dirname + '/glsl/UberShader.vert') },
         uberShaderFrag: { glsl: glslify(__dirname + '/glsl/UberShader.frag') },
-        reflectionMap: { binary: ASSETS_DIR + '/envmaps/garage.hdr' },
+        reflectionMap: { binary: ASSETS_DIR + '/envmaps/temp/14-Hamarikyu_Bridge_B.hdr' },
         irradianceMap: { binary: ASSETS_DIR + '/envmaps/garage_diffuse.hdr' },
         irradianceCubemap: { binary: ASSETS_DIR + '/envmaps_pmrem_dds/StPetersIrradiance.dds' }, //TEMP
         reflectionCubemap: { binary: ASSETS_DIR + '/envmaps_pmrem_dds/StPetersReflection.dds' }, //TEMP
@@ -141,6 +142,18 @@ Window.create({
     initMaterials: function() {
         var ctx = this.getContext();
         var res = this.getResources();
+
+        var numSamples = 512;
+        var hammersleyPointSet = new Float32Array(4 * numSamples);
+        for(var i=0; i<numSamples; i++) {
+            var p = hammersley(i, numSamples)
+            hammersleyPointSet[i*4]   = p[0];
+            hammersleyPointSet[i*4+1] = p[1];
+            hammersleyPointSet[i*4+2] = 0;
+            hammersleyPointSet[i*4+3] = 0;
+        }
+
+        this.hammersleyPointSetMap = ctx.createTexture2D(hammersleyPointSet, 1, numSamples, { type: ctx.FLOAT, magFilter: ctx.NEAREST, minFilter: ctx.NEAREST });
 
         var irradianceMapInfo = parseHdr(res.irradianceMap);
         var irradianceMap = this.irradianceMap = ctx.createTexture2D(irradianceMapInfo.data, irradianceMapInfo.shape[0], irradianceMapInfo.shape[1], {
@@ -228,30 +241,33 @@ Window.create({
             name: 'reflection',
             uIrradianceMap: this.irradianceCubemap,
             uReflectionMap: this.reflectionCubemap,
-            uAlbedoColor: [0.6, 0.1, 0.1, 1.0],
+            uAlbedoColor: [1.0, 0.86, 0.57, 1.0],
             uAlbedoColorParams: { type: 'color' },
             uLightColor: [1, 1, 1, 1.0],
             uLightColorParams: { min: 0, max: 10 },
+            uHammersleyPointSetMap: this.hammersleyPointSetMap,
             showIrradiance: true
         }))
         materials.push(new UberMaterial(ctx, {
             name: 'fresnel',
             uIrradianceMap: this.irradianceCubemap,
             uReflectionMap: this.reflectionCubemap,
-            uAlbedoColor: [0.6, 0.1, 0.1, 1.0],
+            uAlbedoColor: [1.0, 0.86, 0.57, 1.0],
             uAlbedoColorParams: { type: 'color' },
             uLightColor: [1, 1, 1, 1.0],
             uLightColorParams: { min: 0, max: 10 },
+            uHammersleyPointSetMap: this.hammersleyPointSetMap,
         }))
 
         materials.push(new UberMaterial(ctx, {
             name: 'final color',
             uIrradianceMap: this.irradianceCubemap,
             uReflectionMap: this.reflectionCubemap,
-            uAlbedoColor: [0.6, 0.1, 0.1, 1.0],
+            uAlbedoColor: [1.0, 0.86, 0.57, 1.0],
             uAlbedoColorParams: { type: 'color' },
             uLightColor: [1, 1, 1, 1.0],
             uLightColorParams: { min: 0, max: 10 },
+            uHammersleyPointSetMap: this.hammersleyPointSetMap,
             uUE4: true
         }))
     },
@@ -266,7 +282,6 @@ Window.create({
         this.gui.addTextureCube('Reflection Map 64', this.reflectionMap64)
         this.gui.addTextureCube('Reflection Map 32', this.reflectionMap32)
         this.gui.addTextureCube('Irradiance CubeMap', this.irradianceCubemap)
-        this.gui.addTexture2D('Irradiance Map', this.irradianceMap)
 
         this.gui.addParam('roughness', State, 'roughness', { min: 0, max: 1}, function(value) {
             materials.forEach(function(material, i) {
@@ -289,6 +304,12 @@ Window.create({
         this.gui.addParam('exposure', State, 'exposure', { min: 0, max: 3}, function(value) {
             materials.forEach(function(material, i) {
                 material.uniforms.uExposure = value;
+            })
+        })
+
+        this.gui.addParam('albedo', State, 'albedo', { type: 'color' }, function(value) {
+            materials.forEach(function(material, i) {
+                material.uniforms.uAlbedoColor = value;
             })
         })
     },
