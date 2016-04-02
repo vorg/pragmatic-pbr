@@ -17,6 +17,8 @@ precision highp float;
   #extension GL_ARB_shader_texture_lod : require
 #endif
 
+uniform bool uUE4;
+
 uniform mat4 uInverseViewMatrix;
 uniform float uExposure;
 uniform float uIor;
@@ -225,7 +227,7 @@ vec3 getFresnel(inout FragData data) {
     }
 #endif
 
-void mainOld() {
+void mainCodingLabsOld() {
     FragData data;
     data.color = vec3(0.0);
     data.albedo = vec3(0.0);
@@ -265,8 +267,6 @@ void mainOld() {
     vec3 fresnel = getFresnel(data);
     data.specularity += fresnel;
 
-    gl_FragColor = vec4(data.specularity, 1.0);
-    return;
 
     vec3 lightDiffuse = data.lightAtten * data.albedo * uLightColor.rgb; //TODO: remove albedo from here?
     vec3 lightSpecular = getLightSpecular(data) * uLightColor.rgb;
@@ -322,7 +322,7 @@ void mainOld() {
     //data.color = data.reflectionColor * rF;
     //data.color = NdotRL * rD * rG * rF / rdenom;
     //data.color = data.reflectionColor * getFresnel(data);
-    data.color *= data.reflectionColor;
+    //data.color *= data.reflectionColor;
 
     data.color *= uExposure;
 
@@ -400,7 +400,7 @@ vec3 GGX_Specular(samplerCube SpecularEnvmap, vec3 normal, vec3 viewVector, floa
     return radiance / SamplesCount;
 }
 
-void main() {
+void mainCodingLabs() {
     FragData data;
     data.color = vec3(0.0);
     data.albedo = vec3(0.0);
@@ -448,6 +448,11 @@ void main() {
 
     data.color = kd * diffuse + /*ks **/ specular;
 
+    float numMipMaps = 8;
+    float mipLevel = data.roughness * numMipMaps;
+    data.color = textureCubeLod(uReflectionMap, envMapCube(data.normalWorld), mipLevel).rgb;
+
+    data.color = specular;
 
     #ifdef SHOW_NORMALS
         data.color = data.normalWorld * 0.5 + 0.5;
@@ -478,4 +483,110 @@ void main() {
     gl_FragColor.rgb = data.color;
     gl_FragColor.a = data.opacity;
 
+}
+
+//Unreal Engine 4
+void mainUE4() {
+    FragData data;
+    data.color = vec3(0.0);
+    data.albedo = vec3(0.0);
+    data.opacity = 1.0;
+    data.positionWorld = vPositionWorld;
+    data.positionView = vPositionView;
+    data.normalWorld = normalize(vNormalWorld);
+    data.normalView = normalize(vNormalView);
+    data.texCoord = vTexCoord;
+    data.eyePosView = vec3(0.0, 0.0, 0.0);
+    data.eyeDirView = normalize(data.eyePosView - data.positionView);
+    data.eyeDirWorld = vec3(uInverseViewMatrix * vec4(data.eyeDirView, 0.0));
+    data.lightAtten = 1.0;
+    data.lightColor = toLinear(uLightColor.rgb);
+    data.lightPosWorld = uLightPos;
+    data.lightPosView = vLightPosView;
+    data.lightDirWorld = normalize(data.lightPosWorld - data.positionWorld);
+    data.lightDirView = normalize(data.lightPosView - data.positionView);
+    data.reflectionColor = vec3(0.0);
+    data.exposure = uExposure;
+
+    data.albedo = getAlbedo(data);
+    data.roughness = getRoughness(data);
+    data.metalness = getMetalness(data);
+    data.irradianceColor = getIrradiance(data);
+    data.reflectionColor = getReflection(data);
+
+    float ior = uIor;
+
+    //Cook-Torrance Microfacet Specular
+    float roughness = data.roughness;
+    vec3 v = data.eyeDirView;
+    vec3 l = data.lightDirView;
+    vec3 h = normalize(v + l);
+    vec3 n = data.normalView;
+    float a = roughness * roughness;
+    float a2 = a * a;
+    float NdotH = saturate(dot(n,h));
+    float NdotL = saturate(dot(n,l));
+    float NdotV = saturate(dot(n,v));
+    float VdotH = saturate(dot(v,h));
+
+    //Specular D - normal distribution function (NDF), GGX/Trowbridge-Reitz
+    float Ddenim = NdotH * NdotH * (a2 - 1.0) + 1.0;
+    float Dh = a * a / (PI * Ddenim * Ddenim);
+
+    //Specular G - specular geometric attenuation
+    float k = (roughness + 1.0) * (roughness + 1.0) / 8.0;
+    float G1l = NdotL / (NdotL * (1.0 - k) + k);
+    float G1v = NdotV / (NdotV * (1.0 - k) + k);
+    float Glvh = G1l * G1v;
+
+    //Specular F
+    //Calculate colour at normal incidence
+    vec3 F0 = vec3(abs((1.0 - ior) / (1.0 + ior)));
+    F0 = F0 * F0;
+    F0 = mix(F0, data.albedo, data.metalness);
+    vec3 Fvh = F0 + (vec3(1.0) - F0) * pow(2.0, (-5.55473 * VdotH -6.98316)*VdotH);
+
+    vec3 specular = Dh * Fvh * Glvh / (4.0 * NdotL * NdotV);
+
+    data.color = vec3(specular);
+
+    #ifdef SHOW_NORMALS
+        data.color = data.normalWorld * 0.5 + 0.5;
+    #endif
+
+    #ifdef SHOW_TEX_COORDS
+        data.color = vec3(data.texCoord, 0.0);
+    #endif
+
+    #ifdef SHOW_FRESNEL
+        //data.color = rF * data.reflectionColor;
+    #endif
+
+    #ifdef SHOW_IRRADIANCE
+        data.color = data.irradianceColor;
+    #endif
+
+    #ifdef SHOW_INDIRECT_SPECULAR
+        data.color = indirectSpecular;
+    #endif
+
+    #ifdef USE_TONEMAP
+        data.color = tonemapUncharted2(data.color);
+    #endif
+
+    data.color = toGamma(data.color);
+
+    gl_FragColor.rgb = data.color;
+    gl_FragColor.a = data.opacity;
+
+}
+
+void main() {
+    if (uUE4) {
+        mainUE4();
+    }
+    else {
+        //mainCodingLabs();
+        mainCodingLabsOld();
+    }
 }

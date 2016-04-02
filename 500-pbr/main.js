@@ -208,6 +208,11 @@ Window.create({
         this.irradianceCubemap = ctx.createTextureCube(null, CUBEMAP_SIZE/16, CUBEMAP_SIZE/16, { type: ctx.FLOAT });
 
         envmapToCubemap(ctx, this.reflectionMap, this.reflectionCubemap); //render envmap to cubemap
+        ctx.bindTexture(this.reflectionCubemap);
+        var gl = ctx.getGL();
+        gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
+        gl.texParameterf(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR );
+
         downsampleCubemap(ctx, this.reflectionCubemap, this.reflectionMap128);
         downsampleCubemap(ctx, this.reflectionMap128, this.reflectionMap64);
         downsampleCubemap(ctx, this.reflectionMap64,  this.reflectionMap32);
@@ -237,7 +242,6 @@ Window.create({
             uAlbedoColorParams: { type: 'color' },
             uLightColor: [1, 1, 1, 1.0],
             uLightColorParams: { min: 0, max: 10 },
-            showFresnel: true
         }))
 
         materials.push(new UberMaterial(ctx, {
@@ -247,7 +251,8 @@ Window.create({
             uAlbedoColor: [0.6, 0.1, 0.1, 1.0],
             uAlbedoColorParams: { type: 'color' },
             uLightColor: [1, 1, 1, 1.0],
-            uLightColorParams: { min: 0, max: 10 }
+            uLightColorParams: { min: 0, max: 10 },
+            uUE4: true
         }))
     },
     initGUI: function() {
