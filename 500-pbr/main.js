@@ -55,7 +55,8 @@ var State = {
     metalness: 0,
     ior: 1.4,
     exposure: 1,
-    albedo: [1.0, 0.86, 0.57, 1.0]
+    albedo: [1.0, 0.86, 0.57, 1.0],
+    lightColor: [1.0, 1, 1, 1.0]
 }
 
 Window.create({
@@ -78,7 +79,7 @@ Window.create({
         specularCookTorranceFrag: { glsl: glslify(__dirname + '/glsl/SpecularCookTorrance.frag') },
         uberShaderVert: { glsl: glslify(__dirname + '/glsl/UberShader.vert') },
         uberShaderFrag: { glsl: glslify(__dirname + '/glsl/UberShader.frag') },
-        reflectionMap: { binary: ASSETS_DIR + '/envmaps/temp/14-Hamarikyu_Bridge_B.hdr' },
+        reflectionMap: { binary: ASSETS_DIR + '/envmaps/garage.hdr' },
         irradianceMap: { binary: ASSETS_DIR + '/envmaps/garage_diffuse.hdr' },
         irradianceCubemap: { binary: ASSETS_DIR + '/envmaps_pmrem_dds/StPetersIrradiance.dds' }, //TEMP
         reflectionCubemap: { binary: ASSETS_DIR + '/envmaps_pmrem_dds/StPetersReflection.dds' }, //TEMP
@@ -164,6 +165,7 @@ Window.create({
         var reflectionMap = this.reflectionMap = ctx.createTexture2D(reflectionMapInfo.data, reflectionMapInfo.shape[0], reflectionMapInfo.shape[1], {
             type: ctx.FLOAT
         });
+
 
         //TEMP
         var irradianceCubemapInfo = parseDds(res.irradianceCubemap);
@@ -312,6 +314,12 @@ Window.create({
                 material.uniforms.uAlbedoColor = value;
             })
         })
+
+        this.gui.addParam('lightColor', State, 'lightColor', { min: 0, max:10 }, function(value) {
+            materials.forEach(function(material, i) {
+                material.uniforms.uLightColor = value;
+            })
+        })
     },
     onKeyPress: function(e) {
         if (e.str == 'g') {
@@ -372,12 +380,12 @@ Window.create({
 
             ctx.pushModelMatrix();
             ctx.translate([-2, 0, 0])
-            ctx.bindMesh(this.sphereMesh);
+            ctx.bindMesh(this.dragonMesh);
             ctx.drawMesh();
             ctx.popModelMatrix();
 
             ctx.pushModelMatrix();
-            ctx.bindMesh(this.dragonMesh);
+            ctx.bindMesh(this.sphereMesh);
             ctx.drawMesh();
             ctx.popModelMatrix();
 

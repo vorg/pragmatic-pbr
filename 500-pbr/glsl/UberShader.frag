@@ -107,8 +107,8 @@ float GGX_Distribution(vec3 n, vec3 h, float alpha) {
     float NoH2 = NoH * NoH;
     float den = NoH2 * alpha2 + (1.0 - NoH2);
     //chiGGX removed to follow Graphics Rants, will get away with NdotL anyway
-    //return (chiGGX(NoH) * alpha2) / ( PI * den * den );
-    return (alpha2) / ( PI * den * den );
+    return (chiGGX(NoH) * alpha2) / ( PI * den * den );
+    //return (alpha2) / ( PI * den * den );
 }
 
 //TODO: doesn't seem to work / do anything
@@ -312,9 +312,10 @@ void mainCodingLabsOld() {
     float G = GGX_PartialGeometryTerm(v, n, h, alpha);
     vec3 F = Fresnel_Schlick(VdotH, F0); //VdotH
     float denom = saturate( 4 * (NdotV * NdotH + 0.01) );
-    vec3 indirectSpecular = NdotL * D * G * F / denom;
+    //vec3 indirectSpecular = D * G * F / denom;;
+    vec3 indirectSpecular = NdotL * D * G * F / denom;;
     data.color = indirectSpecular;
-    //data.color = Fresnel_Schlick(saturate(dot(n,l)), F0);
+    //data.color = F;
     //data.color = vec3(VdotH);
     //
     vec3 rl = normalize(reflect(-data.eyeDirView, data.normalView));
@@ -571,12 +572,30 @@ float G_Smith(float Roughness, float NoL, float NoV) {
     return Glvh;
 }
 
+//Frostbite
+vec3 F_Schlick(vec3 F0, float fd90, float cosT)
+{
+  return F0 + fd90 * pow( 1 - cosT, 5);
+}
+
+//Frostbite
+float Fr_DisneyDiffuse(float NdotV, float NdotL, float LdotH, float linearRoughness)
+{
+    float energyBias = mix(0, 0.5, linearRoughness);
+    float energyFactor = mix(1.0, 1.0 / 1.51, linearRoughness);
+    float fd90 = energyBias + 2.0 * LdotH*LdotH * linearRoughness;
+    vec3 f0 = vec3(1.0f, 1.0f, 1.0f);
+    float lightScatter = F_Schlick(f0, fd90, NdotL).r;
+    float viewScatter = F_Schlick(f0, fd90, NdotV).r;
+    return lightScatter * viewScatter * energyFactor;
+}
+
 
 //Based on Real Shading in Unreal Engine 4
 //TODO: N & L, which coordinate space they are in?
 vec3 SpecularIBLUE4(vec3 SpecularColor, float Roughness, vec3 N, vec3 V, out vec3 ks) {
     vec3 SpecularLighting = vec3(0.0);
-    const int NumSamples = 512;
+    const int NumSamples = 256;//512;
     for(int i=0; i<NumSamples; i++) {
         vec2 Xi = Hammersley(i, NumSamples);
         //vec3 H = ImportanceSampleGGXUE4(Xi, Roughness, N);
@@ -642,6 +661,7 @@ void mainUE4() {
     float a = roughness * roughness;
     float a2 = a * a;
     float NdotH = saturate(dot(n,h));
+    float LdotH = saturate(dot(l,h));
     float NdotL = saturate(dot(n,l));
     float NdotV = saturate(dot(n,v));
     float VdotH = saturate(dot(v,h));
@@ -660,20 +680,50 @@ void mainUE4() {
     //Calculate colour at normal incidence
     vec3 F0 = vec3(abs((1.0 - ior) / (1.0 + ior)));
     F0 = F0 * F0;
-    //F0 = toLinear(vec3(0.31));
+    F0 = vec3(0.04); //default for non-metals in UE4
     F0 = mix(F0, data.albedo, data.metalness);
 
     vec3 Fvh = F0 + (vec3(1.0) - F0) * pow(2.0, (-5.55473 * VdotH -6.98316)*VdotH);
+    //vec3 Fvh = F0 + (vec3(1.0) - F0) * pow(2.0, (-5.55473 * VdotH -6.98316)*VdotH);
 
     vec3 specular = Dh * Fvh * Glvh / (4.0 * NdotL * NdotV);
 
     data.color = vec3(specular);
 
     vec3 ks = vec3(0.0);
+    n = data.normalWorld;
+    v = data.eyeDirWorld;
     vec3 indirectSpecular = SpecularIBLUE4(F0, roughness, n, v, ks);
     vec3 kd = vec3((1.0 - ks) * (1.0 - data.metalness));
     data.color = kd * data.albedo * data.irradianceColor + ks * indirectSpecular;
+    //data.color = ks * indirectSpecular;
     //data.color = indirectSpecular;
+
+    //direct specular
+    n = data.normalView;
+    l = normalize(data.lightDirView);
+    v = normalize(data.eyeDirView);
+    h = normalize(v + l);
+
+    float alpha = data.roughness * data.roughness;
+    float D = GGX_Distribution(n, h, alpha);
+    float G = GGX_PartialGeometryTerm(v, n, h, alpha);
+    vec3 F = Fresnel_Schlick(VdotH, F0); //VdotH
+    float Fd = Fr_DisneyDiffuse(NdotV, NdotL, LdotH, data.roughness);
+    float denom = saturate( 4 * (NdotV * NdotH + 0.01) );
+    //vec3 indirectSpecular = D * G * F / denom;;
+    vec3 directSpecular = uLightColor.rgb * NdotL * D * G * F / denom;;
+    vec3 directDiffuse = NdotL * uLightColor.rgb * data.albedo / PI;
+    data.color += directDiffuse * Fd + directSpecular;
+
+    //data.color = directSpecular;
+    //data.color = directDiffuse;
+    //data.color = F;
+
+    //ks = Fvh;
+    //kd = vec3((1.0 - ks) * (1.0 - data.metalness));
+    //data.color = kd * NdotL * data.albedo + ks * vec3(specular);
+    //data.color = specular;//Dh * Fvh * Glvh / (4.0 * NdotL * NdotV);
 
     #ifdef SHOW_NORMALS
         data.color = data.normalWorld * 0.5 + 0.5;
