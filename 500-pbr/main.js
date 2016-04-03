@@ -12,16 +12,17 @@ var parseHdr     = require('../local_modules/parse-hdr');
 var parseDds     = require('parse-dds');
 var isBrowser    = require('is-browser');
 var UberMaterial = require('./UberMaterial');
-var renderToCubemap = require('../local_modules/render-to-cubemap');
-var downsampleCubemap = require('../local_modules/downsample-cubemap');
-var convolveCubemap = require('../local_modules/convolve-cubemap');
-var prefilterCubemap = require('../local_modules/prefilter-cubemap');
-var envmapToCubemap = require('../local_modules/envmap-to-cubemap');
-var parseObj = require('../local_modules/geom-parse-obj/');
-var computeNormals = require('../local_modules/geom-compute-normals/')
-var centerAndResize = require('../local_modules/geom-center-and-resize/');
-var Vec3 = require('pex-math/Vec3');
-var hammersley   = require('hammersley');
+var PBRImportanceSampled = require('./PBRImportanceSampled.js');
+var renderToCubemap      = require('../local_modules/render-to-cubemap');
+var downsampleCubemap   = require('../local_modules/downsample-cubemap');
+var convolveCubemap     = require('../local_modules/convolve-cubemap');
+var prefilterCubemap    = require('../local_modules/prefilter-cubemap');
+var envmapToCubemap     = require('../local_modules/envmap-to-cubemap');
+var parseObj            = require('../local_modules/geom-parse-obj/');
+var computeNormals      = require('../local_modules/geom-compute-normals/')
+var centerAndResize     = require('../local_modules/geom-center-and-resize/');
+var Vec3                = require('pex-math/Vec3');
+var hammersley          = require('hammersley');
 
 function grid(x, y, w, h, nw, nh, margin){
     margin = margin || 0;
@@ -224,7 +225,7 @@ Window.create({
         this.reflectionMap32 = ctx.createTextureCube(null, CUBEMAP_SIZE/8, CUBEMAP_SIZE/8, { type: ctx.FLOAT, minFilter: ctx.NEAREST, magFilter: ctx.NEAREST });
         this.reflectionMap16 = ctx.createTextureCube(null, CUBEMAP_SIZE/16, CUBEMAP_SIZE/16, { type: ctx.FLOAT, minFilter: ctx.NEAREST, magFilter: ctx.NEAREST });
         this.irradianceCubemap = ctx.createTextureCube(null, CUBEMAP_SIZE/16, CUBEMAP_SIZE/16, { type: ctx.FLOAT });
-        this.brdfLut = ctx.createTexture2D(res.brdfLut);
+        this.brdfLut = ctx.createTexture2D(res.brdfLut, res.brdfLut.width, res.brdfLut.height, { flip: true });
 
         envmapToCubemap(ctx, this.reflectionMap, this.reflectionCubemap); //render envmap to cubemap
         ctx.bindTexture(this.reflectionCubemap);
@@ -250,41 +251,36 @@ Window.create({
         this.debugDraw = new Draw(ctx);
 
         materials.push(new UberMaterial(ctx, {
-            name: 'reflection',
-            uIrradianceMap: this.irradianceCubemap,
-            uReflectionMap: this.reflectionCubemap,
-            uAlbedoColor: [1.0, 0.86, 0.57, 1.0],
-            uAlbedoColorParams: { type: 'color' },
-            uLightColor: [1, 1, 1, 1.0],
-            uLightColorParams: { min: 0, max: 10 },
-            uHammersleyPointSetMap: this.hammersleyPointSetMap,
-            uBrdfLut: this.brdfLut,
-            showIrradiance: true
-        }))
-        materials.push(new UberMaterial(ctx, {
             name: 'fresnel',
             uIrradianceMap: this.irradianceCubemap,
             uReflectionMap: this.reflectionCubemap,
             uAlbedoColor: [1.0, 0.86, 0.57, 1.0],
-            uAlbedoColorParams: { type: 'color' },
             uLightColor: [1, 1, 1, 1.0],
-            uLightColorParams: { min: 0, max: 10 },
+            uHammersleyPointSetMap: this.hammersleyPointSetMap,
+            uBrdfLut: this.brdfLut,
+            uUE4Prefiltered: true
+        }))
+
+        materials.push(new UberMaterial(ctx, {
+            name: 'reflection',
+            uIrradianceMap: this.irradianceCubemap,
+            uReflectionMap: this.reflectionCubemap,
+            uAlbedoColor: [1.0, 0.86, 0.57, 1.0],
+            uLightColor: [1, 1, 1, 1.0],
             uHammersleyPointSetMap: this.hammersleyPointSetMap,
             uBrdfLut: this.brdfLut,
             uUE4: true
         }))
 
-        materials.push(new UberMaterial(ctx, {
-            name: 'final color',
+        materials.push(new PBRImportanceSampled(ctx, {
+            name: 'reflection',
             uIrradianceMap: this.irradianceCubemap,
-            uReflectionMap: this.reflectionPREM,
+            uReflectionMap: this.reflectionCubemap,
             uAlbedoColor: [1.0, 0.86, 0.57, 1.0],
-            uAlbedoColorParams: { type: 'color' },
             uLightColor: [1, 1, 1, 1.0],
-            uLightColorParams: { min: 0, max: 10 },
             uHammersleyPointSetMap: this.hammersleyPointSetMap,
             uBrdfLut: this.brdfLut,
-            uUE4Prefiltered: true
+            uUE4: true
         }))
     },
     initGUI: function() {

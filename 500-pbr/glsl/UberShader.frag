@@ -817,11 +817,38 @@ void mainUE4Prefiltered() {
     vec3 n = data.normalView;
     vec3 v = normalize(data.eyeDirView);
     float NoV = saturate( dot( n, v ) );
-    vec3 EnvBRDF = EnvBRDFApprox( F0, data.roughness, NoV );
+    vec3 reflectance = EnvBRDFApprox( F0, data.roughness, NoV );
+
+    vec2 EnvBRDF = texture2D(uBrdfLut, vec2(NoV, data.roughness)).rg;
+    //reflectance = F0 * EnvBRDF.x + EnvBRDF.y;
+
     vec3 ks = vec3(0.0);
     vec3 kd = vec3((1.0 - ks) * (1.0 - data.metalness));
-    data.color = kd * data.albedo * data.irradianceColor + data.reflectionColor * EnvBRDF;
+    data.color = kd * data.albedo * data.irradianceColor + data.reflectionColor * reflectance;
 
+    n = data.normalView;
+    vec3 l = normalize(data.lightDirView);
+    v = normalize(data.eyeDirView);
+    vec3 h = normalize(v + l);
+
+    float VdotH = saturate(dot(v, h));
+    float NdotL = saturate(dot(n, l));
+    float NdotH = saturate(dot(n, h));
+    float NdotV = saturate(dot(n, v));
+    float LdotH = saturate(dot(l, h));
+
+    float alpha = data.roughness * data.roughness;
+    float D = GGX_Distribution(n, h, alpha);
+    float G = GGX_PartialGeometryTerm(v, n, h, alpha);
+    vec3 F = Fresnel_Schlick(VdotH, F0); //VdotH
+    float Fd = Fr_DisneyDiffuse(NdotV, NdotL, LdotH, data.roughness);
+    float denom = saturate( 4 * (NdotV * NdotH + 0.01) );
+    //vec3 indirectSpecular = D * G * F / denom;;
+    vec3 directSpecular = uLightColor.rgb * NdotL * D * G * F / denom;;
+    vec3 directDiffuse = NdotL * uLightColor.rgb * data.albedo / PI;
+    data.color += directDiffuse * Fd + directSpecular;
+
+    data.color *= uExposure;
 
     #ifdef USE_TONEMAP
         data.color = tonemapUncharted2(data.color);
