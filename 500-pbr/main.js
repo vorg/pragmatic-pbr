@@ -11,8 +11,9 @@ var GUI          = require('pex-gui');
 var parseHdr     = require('../local_modules/parse-hdr');
 var parseDds     = require('parse-dds');
 var isBrowser    = require('is-browser');
-var UberMaterial = require('./UberMaterial');
+var UberMaterial         = require('./UberMaterial');
 var PBRImportanceSampled = require('./PBRImportanceSampled.js');
+var PBRMaterial          = require('./PBRMaterial.js');
 var renderToCubemap      = require('../local_modules/render-to-cubemap');
 var downsampleCubemap   = require('../local_modules/downsample-cubemap');
 var convolveCubemap     = require('../local_modules/convolve-cubemap');
@@ -226,7 +227,7 @@ Window.create({
         this.reflectionMap64 = ctx.createTextureCube(null, CUBEMAP_SIZE/4, CUBEMAP_SIZE/4, { type: ctx.FLOAT, minFilter: ctx.NEAREST, magFilter: ctx.NEAREST });
         this.reflectionMap32 = ctx.createTextureCube(null, CUBEMAP_SIZE/8, CUBEMAP_SIZE/8, { type: ctx.FLOAT, minFilter: ctx.NEAREST, magFilter: ctx.NEAREST });
         this.reflectionMap16 = ctx.createTextureCube(null, CUBEMAP_SIZE/16, CUBEMAP_SIZE/16, { type: ctx.FLOAT, minFilter: ctx.NEAREST, magFilter: ctx.NEAREST });
-        //this.irradianceCubemap = ctx.createTextureCube(null, CUBEMAP_SIZE/16, CUBEMAP_SIZE/16, { type: ctx.FLOAT });
+        this.irradianceCubemapConv = ctx.createTextureCube(null, CUBEMAP_SIZE/16, CUBEMAP_SIZE/16, { type: ctx.FLOAT });
         this.brdfLut = ctx.createTexture2D(res.brdfLut, res.brdfLut.width, res.brdfLut.height, { flip: true });
 
         //envmapToCubemap(ctx, this.reflectionMap, this.reflectionCubemap); //render envmap to cubemap
@@ -241,21 +242,23 @@ Window.create({
         gl.texParameterf(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAG_FILTER, gl.LINEAR );
         gl.texParameterf(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR );
 
-        //downsampleCubemap(ctx, this.reflectionCubemap, this.reflectionMap128);
-        //downsampleCubemap(ctx, this.reflectionMap128, this.reflectionMap64);
-        //downsampleCubemap(ctx, this.reflectionMap64,  this.reflectionMap32);
-        //downsampleCubemap(ctx, this.reflectionMap32,  this.reflectionMap16);
-        //convolveCubemap(ctx,   this.reflectionMap16,  this.irradianceCubemap);
+        downsampleCubemap(ctx, this.reflectionCubemap, this.reflectionMap128);
+        downsampleCubemap(ctx, this.reflectionMap128, this.reflectionMap64);
+        downsampleCubemap(ctx, this.reflectionMap64,  this.reflectionMap32);
+        downsampleCubemap(ctx, this.reflectionMap32,  this.reflectionMap16);
+        convolveCubemap(ctx,   this.reflectionMap16,  this.irradianceCubemapConv);
         prefilterCubemap(ctx,   this.reflectionCubemap,  this.reflectionPREM);
+        //this.reflectionPREM = this.reflectionCubemap
+        //this.irradianceCubemap = this.irradianceCubemapConv;
 
         this.showColorsProgram = ctx.createProgram(res.showColorsVert, res.showColorsFrag)
         this.skyboxProgram = ctx.createProgram(res.skyboxVert, res.skyboxFrag)
 
         this.debugDraw = new Draw(ctx);
 
-        materials.push(new UberMaterial(ctx, {
+        materials.push(new PBRMaterial(ctx, {
             name: 'fresnel',
-            uIrradianceMap: this.irradianceCubemap,
+            uIrradianceMap: this.irradianceCubemapConv,
             uReflectionMap: this.reflectionPREM,
             uAlbedoColor: [1.0, 0.86, 0.57, 1.0],
             uLightColor: [1, 1, 1, 1.0],
@@ -296,6 +299,7 @@ Window.create({
         this.gui.addTextureCube('Reflection Map 64', this.reflectionMap64)
         this.gui.addTextureCube('Reflection Map 32', this.reflectionMap32)
         this.gui.addTextureCube('Irradiance CubeMap', this.irradianceCubemap)
+        this.gui.addTextureCube('Irradiance CubeMap Conv', this.irradianceCubemapConv)
         this.gui.addTextureCube('Reflection PREM', this.reflectionPREM)
 
         this.gui.addParam('roughness', State, 'roughness', { min: 0, max: 1}, function(value) {

@@ -177,7 +177,10 @@ void main() {
     vec3 indirectSpecular = SpecularIBLUE4(F0, roughness, normalWorld, eyeDirWorld, ks);
     vec3 kd = vec3((1.0 - ks) * (1.0 - metalness));
 
+    //Where this version with kd comes from?
     vec3 color = kd * albedo * irradianceColor + indirectSpecular;
+
+    //vec3 color = albedo * irradianceColor + indirectSpecular;
 
     color *= uExposure;
 
