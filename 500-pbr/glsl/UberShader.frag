@@ -597,7 +597,7 @@ float Fr_DisneyDiffuse(float NdotV, float NdotL, float LdotH, float linearRoughn
 //TODO: N & L, which coordinate space they are in?
 vec3 SpecularIBLUE4(vec3 SpecularColor, float Roughness, vec3 N, vec3 V, out vec3 ks) {
     vec3 SpecularLighting = vec3(0.0);
-    const int NumSamples = 256;//512;
+    const int NumSamples = 512;//512;
     for(int i=0; i<NumSamples; i++) {
         vec2 Xi = Hammersley(i, NumSamples);
         //vec3 H = ImportanceSampleGGXUE4(Xi, Roughness, N);
@@ -667,7 +667,7 @@ void mainUE4() {
     float NdotL = saturate(dot(n,l));
     float NdotV = saturate(dot(n,v));
     float VdotH = saturate(dot(v,h));
-
+    /*
     //Specular D - normal distribution function (NDF), GGX/Trowbridge-Reitz
     float Ddenim = NdotH * NdotH * (a2 - 1.0) + 1.0;
     float Dh = a * a / (PI * Ddenim * Ddenim);
@@ -677,30 +677,30 @@ void mainUE4() {
     float G1l = NdotL / (NdotL * (1.0 - k) + k);
     float G1v = NdotV / (NdotV * (1.0 - k) + k);
     float Glvh = G1l * G1v;
-
+    */
     //Specular F
     //Calculate colour at normal incidence
     vec3 F0 = vec3(abs((1.0 - ior) / (1.0 + ior)));
     F0 = F0 * F0;
-    F0 = vec3(0.04); //default for non-metals in UE4
+    //F0 = vec3(0.04); //default for non-metals in UE4
     F0 = mix(F0, data.albedo, data.metalness);
-
+    /*
     vec3 Fvh = F0 + (vec3(1.0) - F0) * pow(2.0, (-5.55473 * VdotH -6.98316)*VdotH);
     //vec3 Fvh = F0 + (vec3(1.0) - F0) * pow(2.0, (-5.55473 * VdotH -6.98316)*VdotH);
 
     vec3 specular = Dh * Fvh * Glvh / (4.0 * NdotL * NdotV);
 
     data.color = vec3(specular);
-
+    */
     vec3 ks = vec3(0.0);
     n = data.normalWorld;
     v = data.eyeDirWorld;
     vec3 indirectSpecular = SpecularIBLUE4(F0, roughness, n, v, ks);
     vec3 kd = vec3((1.0 - ks) * (1.0 - data.metalness));
-    data.color = kd * data.albedo * data.irradianceColor + ks * indirectSpecular;
+    data.color = kd * data.albedo * data.irradianceColor + indirectSpecular;
     //data.color = ks * indirectSpecular;
     //data.color = indirectSpecular;
-
+/*
     //direct specular
     n = data.normalView;
     l = normalize(data.lightDirView);
@@ -717,7 +717,7 @@ void mainUE4() {
     vec3 directSpecular = uLightColor.rgb * NdotL * D * G * F / denom;;
     vec3 directDiffuse = NdotL * uLightColor.rgb * data.albedo / PI;
     data.color += directDiffuse * Fd + directSpecular;
-
+*/
     //data.color = directSpecular;
     //data.color = directDiffuse;
     //data.color = F;
@@ -726,6 +726,8 @@ void mainUE4() {
     //kd = vec3((1.0 - ks) * (1.0 - data.metalness));
     //data.color = kd * NdotL * data.albedo + ks * vec3(specular);
     //data.color = specular;//Dh * Fvh * Glvh / (4.0 * NdotL * NdotV);
+
+    data.color *= uExposure;
 
     #ifdef SHOW_NORMALS
         data.color = data.normalWorld * 0.5 + 0.5;
@@ -811,7 +813,9 @@ void mainUE4Prefiltered() {
     data.irradianceColor = getIrradiance(data);
     data.reflectionColor = getPrefilteredReflection(data);
 
-    vec3 F0 = vec3(0.04); //default for non-metals in UE4
+    vec3 F0 = vec3(abs((1.0 - uIor) / (1.0 + uIor)));
+    F0 = F0 * F0;
+    //F0 = vec3(0.04); //0.04 is default for non-metals in UE4
     F0 = mix(F0, data.albedo, data.metalness);
 
     vec3 n = data.normalView;
@@ -824,6 +828,8 @@ void mainUE4Prefiltered() {
 
     vec3 ks = vec3(0.0);
     vec3 kd = vec3((1.0 - ks) * (1.0 - data.metalness));
+    //TODO: kd is 0 or 1  so not really energy conserving
+    //we could use disney brdf for irradiance map to compensate for that like in Frostbite
     data.color = kd * data.albedo * data.irradianceColor + data.reflectionColor * reflectance;
 
     n = data.normalView;
@@ -846,7 +852,7 @@ void mainUE4Prefiltered() {
     //vec3 indirectSpecular = D * G * F / denom;;
     vec3 directSpecular = uLightColor.rgb * NdotL * D * G * F / denom;;
     vec3 directDiffuse = NdotL * uLightColor.rgb * data.albedo / PI;
-    data.color += directDiffuse * Fd + directSpecular;
+    //data.color += directDiffuse * Fd + directSpecular;
 
     data.color *= uExposure;
 
