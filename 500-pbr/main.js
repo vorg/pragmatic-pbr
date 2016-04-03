@@ -15,6 +15,7 @@ var UberMaterial = require('./UberMaterial');
 var renderToCubemap = require('../local_modules/render-to-cubemap');
 var downsampleCubemap = require('../local_modules/downsample-cubemap');
 var convolveCubemap = require('../local_modules/convolve-cubemap');
+var prefilterCubemap = require('../local_modules/prefilter-cubemap');
 var envmapToCubemap = require('../local_modules/envmap-to-cubemap');
 var parseObj = require('../local_modules/geom-parse-obj/');
 var computeNormals = require('../local_modules/geom-compute-normals/')
@@ -84,7 +85,8 @@ Window.create({
         irradianceCubemap: { binary: ASSETS_DIR + '/envmaps_pmrem_dds/StPetersIrradiance.dds' }, //TEMP
         reflectionCubemap: { binary: ASSETS_DIR + '/envmaps_pmrem_dds/StPetersReflection.dds' }, //TEMP
         blob: { text: ASSETS_DIR + '/models/blob.obj' },
-        dragon: { text: ASSETS_DIR + '/models/dragon.obj' }
+        dragon: { text: ASSETS_DIR + '/models/dragon.obj' },
+        brdfLut: { image: ASSETS_DIR + '/brdf/lut.png' }
     },
     init: function() {
         this.initMeshes();
@@ -216,14 +218,21 @@ Window.create({
 
         //TODO: seamless cubemap sampling would help...
         this.reflectionCubemap = ctx.createTextureCube(null, CUBEMAP_SIZE, CUBEMAP_SIZE, { type: ctx.FLOAT, minFilter: ctx.NEAREST, magFilter: ctx.NEAREST });
+        this.reflectionPREM = ctx.createTextureCube(null, CUBEMAP_SIZE, CUBEMAP_SIZE, { type: ctx.FLOAT, minFilter: ctx.NEAREST, magFilter: ctx.NEAREST });
         this.reflectionMap128 = ctx.createTextureCube(null, CUBEMAP_SIZE/2, CUBEMAP_SIZE/2, { type: ctx.FLOAT, minFilter: ctx.NEAREST, magFilter: ctx.NEAREST });
         this.reflectionMap64 = ctx.createTextureCube(null, CUBEMAP_SIZE/4, CUBEMAP_SIZE/4, { type: ctx.FLOAT, minFilter: ctx.NEAREST, magFilter: ctx.NEAREST });
         this.reflectionMap32 = ctx.createTextureCube(null, CUBEMAP_SIZE/8, CUBEMAP_SIZE/8, { type: ctx.FLOAT, minFilter: ctx.NEAREST, magFilter: ctx.NEAREST });
         this.reflectionMap16 = ctx.createTextureCube(null, CUBEMAP_SIZE/16, CUBEMAP_SIZE/16, { type: ctx.FLOAT, minFilter: ctx.NEAREST, magFilter: ctx.NEAREST });
         this.irradianceCubemap = ctx.createTextureCube(null, CUBEMAP_SIZE/16, CUBEMAP_SIZE/16, { type: ctx.FLOAT });
+        this.brdfLut = ctx.createTexture2D(res.brdfLut);
 
         envmapToCubemap(ctx, this.reflectionMap, this.reflectionCubemap); //render envmap to cubemap
         ctx.bindTexture(this.reflectionCubemap);
+        var gl = ctx.getGL();
+        gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
+        gl.texParameterf(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR );
+
+        ctx.bindTexture(this.reflectionPREM);
         var gl = ctx.getGL();
         gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
         gl.texParameterf(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR );
@@ -233,6 +242,7 @@ Window.create({
         downsampleCubemap(ctx, this.reflectionMap64,  this.reflectionMap32);
         downsampleCubemap(ctx, this.reflectionMap32,  this.reflectionMap16);
         convolveCubemap(ctx,   this.reflectionMap16,  this.irradianceCubemap);
+        prefilterCubemap(ctx,   this.reflectionCubemap,  this.reflectionPREM);
 
         this.showColorsProgram = ctx.createProgram(res.showColorsVert, res.showColorsFrag)
         this.skyboxProgram = ctx.createProgram(res.skyboxVert, res.skyboxFrag)
@@ -248,6 +258,7 @@ Window.create({
             uLightColor: [1, 1, 1, 1.0],
             uLightColorParams: { min: 0, max: 10 },
             uHammersleyPointSetMap: this.hammersleyPointSetMap,
+            uBrdfLut: this.brdfLut,
             showIrradiance: true
         }))
         materials.push(new UberMaterial(ctx, {
@@ -259,18 +270,21 @@ Window.create({
             uLightColor: [1, 1, 1, 1.0],
             uLightColorParams: { min: 0, max: 10 },
             uHammersleyPointSetMap: this.hammersleyPointSetMap,
+            uBrdfLut: this.brdfLut,
+            uUE4: true
         }))
 
         materials.push(new UberMaterial(ctx, {
             name: 'final color',
             uIrradianceMap: this.irradianceCubemap,
-            uReflectionMap: this.reflectionCubemap,
+            uReflectionMap: this.reflectionPREM,
             uAlbedoColor: [1.0, 0.86, 0.57, 1.0],
             uAlbedoColorParams: { type: 'color' },
             uLightColor: [1, 1, 1, 1.0],
             uLightColorParams: { min: 0, max: 10 },
             uHammersleyPointSetMap: this.hammersleyPointSetMap,
-            uUE4: true
+            uBrdfLut: this.brdfLut,
+            uUE4Prefiltered: true
         }))
     },
     initGUI: function() {
@@ -284,6 +298,7 @@ Window.create({
         this.gui.addTextureCube('Reflection Map 64', this.reflectionMap64)
         this.gui.addTextureCube('Reflection Map 32', this.reflectionMap32)
         this.gui.addTextureCube('Irradiance CubeMap', this.irradianceCubemap)
+        this.gui.addTextureCube('Reflection PREM', this.reflectionPREM)
 
         this.gui.addParam('roughness', State, 'roughness', { min: 0, max: 1}, function(value) {
             materials.forEach(function(material, i) {

@@ -19,11 +19,13 @@ precision highp float;
 #endif
 
 uniform bool uUE4;
+uniform bool uUE4Prefiltered;
 
 uniform mat4 uInverseViewMatrix;
 uniform float uExposure;
 uniform float uIor;
 uniform sampler2D uHammersleyPointSetMap;
+uniform sampler2D uBrdfLut;
 
 uniform vec3 uLightPos;
 uniform vec4 uLightColor;
@@ -756,9 +758,88 @@ void mainUE4() {
 
 }
 
+vec3 EnvBRDFApprox( vec3 SpecularColor, float Roughness, float NoV ) {
+    const vec4 c0 = vec4(-1, -0.0275, -0.572, 0.022 );
+    const vec4 c1 = vec4( 1, 0.0425, 1.04, -0.04 );
+    vec4 r = Roughness * c0 + c1;
+    float a004 = min( r.x * r.x, exp2( -9.28 * NoV ) ) * r.x + r.y;
+    vec2 AB = vec2( -1.04, 1.04 ) * a004 + r.zw;
+    return SpecularColor * AB.x + AB.y;
+}
+
+vec3 getPrefilteredReflection(inout FragData data) {
+    float maxMipMapLevel = 5; //TODO: const
+    vec3 reflectionWorld = reflect(-data.eyeDirWorld, data.normalWorld);
+    //vec3 R = envMapCube(data.normalWorld);
+    vec3 R = envMapCube(reflectionWorld);
+    float lod = data.roughness * maxMipMapLevel;
+    float upLod = floor(lod);
+    float downLod = ceil(lod);
+    //vec4 a = textureCubeLod(reflectionMap, fixSeams(reflectionWorld, upLod), upLod);
+    //vec4 b = textureCubeLod(reflectionMap, fixSeams(reflectionWorld, downLod), downLod);
+    vec3 a = textureCubeLod(uReflectionMap, R, upLod).rgb;
+    vec3 b = textureCubeLod(uReflectionMap, R, downLod).rgb;
+    return mix(a, b, lod - upLod);
+}
+
+//Unreal Engine 4
+void mainUE4Prefiltered() {
+    FragData data;
+    data.color = vec3(0.0);
+    data.albedo = vec3(0.0);
+    data.opacity = 1.0;
+    data.positionWorld = vPositionWorld;
+    data.positionView = vPositionView;
+    data.normalWorld = normalize(vNormalWorld);
+    data.normalView = normalize(vNormalView);
+    data.texCoord = vTexCoord;
+    data.eyePosView = vec3(0.0, 0.0, 0.0);
+    data.eyeDirView = normalize(data.eyePosView - data.positionView);
+    data.eyeDirWorld = vec3(uInverseViewMatrix * vec4(data.eyeDirView, 0.0));
+    data.lightAtten = 1.0;
+    data.lightColor = toLinear(uLightColor.rgb);
+    data.lightPosWorld = uLightPos;
+    data.lightPosView = vLightPosView;
+    data.lightDirWorld = normalize(data.lightPosWorld - data.positionWorld);
+    data.lightDirView = normalize(data.lightPosView - data.positionView);
+    data.reflectionColor = vec3(0.0);
+    data.exposure = uExposure;
+
+    data.albedo = getAlbedo(data);
+    data.roughness = getRoughness(data);
+    data.metalness = getMetalness(data);
+    data.irradianceColor = getIrradiance(data);
+    data.reflectionColor = getPrefilteredReflection(data);
+
+    vec3 F0 = vec3(0.04); //default for non-metals in UE4
+    F0 = mix(F0, data.albedo, data.metalness);
+
+    vec3 n = data.normalView;
+    vec3 v = normalize(data.eyeDirView);
+    float NoV = saturate( dot( n, v ) );
+    vec3 EnvBRDF = EnvBRDFApprox( F0, data.roughness, NoV );
+    vec3 ks = vec3(0.0);
+    vec3 kd = vec3((1.0 - ks) * (1.0 - data.metalness));
+    data.color = kd * data.albedo * data.irradianceColor + data.reflectionColor * EnvBRDF;
+
+
+    #ifdef USE_TONEMAP
+        data.color = tonemapUncharted2(data.color);
+    #endif
+
+    data.color = toGamma(data.color);
+
+    gl_FragColor.rgb = data.color;
+    gl_FragColor.a = data.opacity;
+
+}
+
 void main() {
     if (uUE4) {
         mainUE4();
+    }
+    else if (uUE4Prefiltered) {
+        mainUE4Prefiltered();
     }
     else {
         //mainCodingLabs();
