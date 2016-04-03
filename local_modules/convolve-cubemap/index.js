@@ -1,6 +1,5 @@
 var renderToCubemap = require('../render-to-cubemap');
 var glslifySync = require('glslify-sync');
-var hammersley = require('hammersley');
 
 var VERT = glslifySync(__dirname + '/glsl/convolve.vert');
 var FRAG = glslifySync(__dirname + '/glsl/convolve.frag');
