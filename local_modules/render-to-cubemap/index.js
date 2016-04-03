@@ -22,8 +22,10 @@ function renderToCubemap(ctx, cubemap, drawScene, level) {
         viewMatrix = Mat4.create();
     }
 
+    var levelScale = 1.0 / Math.pow(2.0, level);
+
     ctx.pushState(ctx.VIEWPORT_BIT | ctx.FRAMEBUFFER_BIT | ctx.MATRIX_PROJECTION_BIT | ctx.MATRIX_VIEW_BIT | ctx.COLOR_BIT);
-    ctx.setViewport(0, 0, cubemap.getWidth(), cubemap.getHeight());
+    ctx.setViewport(0, 0, cubemap.getWidth()*levelScale, cubemap.getHeight()*levelScale);
     ctx.bindFramebuffer(fbo);
     ctx.setProjectionMatrix(projectionMatrix);
     sides.forEach(function(side, sideIndex) {
