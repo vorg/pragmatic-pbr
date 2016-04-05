@@ -9,18 +9,20 @@ uniform mat3 uNormalMatrix;
 uniform mat4 uInverseViewMatrix;
 
 varying vec3 vNormalWorld;
+varying vec3 vNormalView;
 varying vec3 vEyeDirWorld;
+varying vec3 vEyeDirView;
 varying vec2 vTexCord0;
 
 void main() {
     vec3 positionView = vec3(uViewMatrix * uModelMatrix * vec4(aPosition, 1.0));
 
-    vec3 normalView = vec3(uNormalMatrix * aNormal);
-    vNormalWorld = vec3(uInverseViewMatrix * vec4(normalView, 0.0));
+    vNormalView = vec3(uNormalMatrix * aNormal);
+    vNormalWorld = vec3(uInverseViewMatrix * vec4(vNormalView, 0.0));
     vNormalWorld = aNormal;
 
-    vec3 eyeDirView = normalize(vec3(0.0, 0.0, 0.0) - positionView);
-    vEyeDirWorld = vec3(uInverseViewMatrix * vec4(eyeDirView, 0.0));
+    vEyeDirView = normalize(vec3(0.0, 0.0, 0.0) - positionView);
+    vEyeDirWorld = vec3(uInverseViewMatrix * vec4(vEyeDirView, 0.0));
 
     gl_Position = uProjectionMatrix * vec4(positionView, 1.0);
 

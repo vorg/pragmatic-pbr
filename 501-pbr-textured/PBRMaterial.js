@@ -61,6 +61,9 @@ PBRMaterial.prototype.compile = function() {
     if (uniforms.uMetalness instanceof Texture2D) {
         flags.push('#define USE_METALNESS_MAP');
     }
+    if (uniforms.uNormalMap instanceof Texture2D) {
+        flags.push('#define USE_NORMAL_MAP');
+    }
     if (uniforms.useTonemap) {
         flags.push('#define USE_TONEMAP');
     }

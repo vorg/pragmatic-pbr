@@ -24,8 +24,15 @@ uniform float uExposure;
 uniform float uIor;
 
 varying vec3 vNormalWorld;
+varying vec3 vNormalView;
 varying vec3 vEyeDirWorld;
+varying vec3 vEyeDirView;
+
 varying vec2 vTexCord0;
+
+varying vec3 vPositionView;
+uniform mat4 uInverseViewMatrix;
+
 
 float saturate(float f) {
     return clamp(f, 0.0, 1.0);
@@ -69,6 +76,28 @@ float getMetalness() {
 }
 #endif
 
+#ifdef USE_NORMAL_MAP
+uniform sampler2D uNormalMap;
+#pragma glslify: perturb = require('glsl-perturb-normal')
+vec3 getNormal() {
+    vec3 normalRGB = texture2D(uNormalMap, vTexCord0).rgb;
+    vec3 normalMap = normalRGB * 2.0 - 1.0;
+
+    normalMap.y *= -1.0;
+
+    vec3 N = normalize(vNormalView);
+    vec3 V = normalize(vEyeDirView);
+
+    vec3 normalView = perturb(normalMap, N, V, vTexCord0);
+    vec3 normalWorld = vec3(uInverseViewMatrix * vec4(normalView, 0.0));
+    return normalWorld;
+}
+#else
+vec3 getNormal() {
+    return normalize(vNormalWorld);
+}
+#endif
+
 uniform samplerCube uReflectionMap;
 
 uniform samplerCube uIrradianceMap;
@@ -104,11 +133,8 @@ vec3 getPrefilteredReflection(vec3 eyeDirWorld, vec3 normalWorld, float roughnes
     return mix(a, b, lod - upLod);
 }
 
-varying vec3 vPositionView;
-uniform mat4 uInverseViewMatrix;
-
 void main() {
-    vec3 normalWorld = normalize(vNormalWorld);
+    vec3 normalWorld = getNormal();
     vec3 eyeDirWorld = normalize(vEyeDirWorld);
 
     vec3 albedo = getAlbedo();
@@ -142,5 +168,4 @@ void main() {
 
     gl_FragColor.rgb = color;
     gl_FragColor.a = 1.0;
-
 }
