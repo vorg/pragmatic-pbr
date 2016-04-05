@@ -156,6 +156,11 @@ Window.create({
         var ctx = this.getContext();
         var res = this.getResources();
 
+        if (isBrowser) {
+            ctx.getGL().getExtension('OES_standard_derivatives')
+            ctx.getGL().getExtension('EXT_shader_texture_lod')
+        }
+
         var reflectionMapInfo = parseHdr(res.reflectionMap);
         var reflectionMap = this.reflectionMap = ctx.createTexture2D(reflectionMapInfo.data, reflectionMapInfo.shape[0], reflectionMapInfo.shape[1], {
             type: ctx.FLOAT

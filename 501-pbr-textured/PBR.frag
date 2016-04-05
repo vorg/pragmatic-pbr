@@ -1,3 +1,15 @@
+#ifdef GL_ES
+precision highp float;
+#endif
+
+#ifdef GL_ES
+  #extension GL_EXT_shader_texture_lod : require
+  #extension GL_OES_standard_derivatives : require
+#else
+  #extension GL_ARB_shader_texture_lod : require
+  #define textureCubeLod textureCubeLodExt
+#endif
+
 #pragma glslify: envMapEquirect     = require(../local_modules/glsl-envmap-equirect)
 #pragma glslify: envMapCube         = require(../local_modules/glsl-envmap-cube)
 #pragma glslify: toGamma            = require(glsl-gamma/out)
@@ -5,20 +17,6 @@
 #pragma glslify: tonemapUncharted2  = require(../local_modules/glsl-tonemap-uncharted2)
 #pragma glslify: tonemapFilmic  = require(../local_modules/glsl-tonemap-filmic)
 #pragma glslify: random             = require(glsl-random)
-
-//Disney
-//https://github.com/wdas/brdf/blob/master/src/brdfs/disney.brdf
-
-#ifdef GL_ES
-precision highp float;
-#endif
-
-#ifdef GL_ES
-  #extension GL_EXT_shader_texture_lod : require
-#else
-  #extension GL_ARB_shader_texture_lod : require
-#endif
-
 
 uniform float uExposure;
 uniform float uIor;
@@ -110,8 +108,8 @@ vec3 getIrradiance(vec3 eyeDirWorld, vec3 normalWorld) {
 }
 
 vec3 EnvBRDFApprox( vec3 SpecularColor, float Roughness, float NoV ) {
-    const vec4 c0 = vec4(-1, -0.0275, -0.572, 0.022 );
-    const vec4 c1 = vec4( 1, 0.0425, 1.04, -0.04 );
+    const vec4 c0 = vec4(-1.0, -0.0275, -0.572, 0.022 );
+    const vec4 c1 = vec4( 1.0, 0.0425, 1.04, -0.04 );
     vec4 r = Roughness * c0 + c1;
     float a004 = min( r.x * r.x, exp2( -9.28 * NoV ) ) * r.x + r.y;
     vec2 AB = vec2( -1.04, 1.04 ) * a004 + r.zw;
@@ -119,17 +117,15 @@ vec3 EnvBRDFApprox( vec3 SpecularColor, float Roughness, float NoV ) {
 }
 
 vec3 getPrefilteredReflection(vec3 eyeDirWorld, vec3 normalWorld, float roughness) {
-    float maxMipMapLevel = 5; //TODO: const
+    float maxMipMapLevel = 5.0; //TODO: const
     vec3 reflectionWorld = reflect(-eyeDirWorld, normalWorld);
     //vec3 R = envMapCube(data.normalWorld);
     vec3 R = envMapCube(reflectionWorld);
     float lod = roughness * maxMipMapLevel;
     float upLod = floor(lod);
     float downLod = ceil(lod);
-    //vec4 a = textureCubeLod(reflectionMap, fixSeams(reflectionWorld, upLod), upLod);
-    //vec4 b = textureCubeLod(reflectionMap, fixSeams(reflectionWorld, downLod), downLod);
-    vec3 a = textureCubeLod(uReflectionMap, R, upLod).rgb;
-    vec3 b = textureCubeLod(uReflectionMap, R, downLod).rgb;
+    vec3 a = textureCube(uReflectionMap, R, upLod).rgb;
+    vec3 b = textureCube(uReflectionMap, R, downLod).rgb;
     return mix(a, b, lod - upLod);
 }
 

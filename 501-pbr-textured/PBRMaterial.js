@@ -7,7 +7,6 @@ var Vert = glslify(__dirname + '/PBR.vert');
 var Frag = glslify(__dirname + '/PBR.frag');
 
 function PBRMaterial(ctx, uniforms, watch) {
-    console.log('uAlbedoColor' + uniforms.uAlbedoColor)
     this.ctx = ctx;
     this.uniforms = Object.assign({
         uRoughness: 0.5,
