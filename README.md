@@ -8,7 +8,7 @@ This is code accompanying series of blog posts about implementing PBR from scrat
 
 2. [Setup & Gamma](http://marcinignac.com/blog/pragmatic-pbr-setup-and-gamma/) [![](img/200.jpg)](http://marcinignac.com/blog/pragmatic-pbr-setup-and-gamma/)
 
-3. HDR (High dynamic range images)
+3. [HDR (High dynamic range images)](http://marcinignac.com/blog/pragmatic-pbr-hdr/) [![](img/200.jpg)](http://marcinignac.com/blog/pragmatic-pbr-hdr/)
 4. IBL (Image based lighting)
 5. BRDFs?
 6. Putting it all together?
