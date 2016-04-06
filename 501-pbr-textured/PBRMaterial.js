@@ -18,7 +18,8 @@ function PBRMaterial(ctx, uniforms, watch) {
         uHammersleyPointSetMap: null,
         uAlbedoColor: [0,0,0,1],
         uLightColor: [1,1,1,1],
-        uIor: 1.4
+        uIor: 1.4,
+        uTexCoord0Scale: 2
     }, uniforms || {})
 
     this.name = uniforms.name || 'PBRIBL';
@@ -51,7 +52,6 @@ PBRMaterial.prototype.compile = function() {
     var flags = [];
 
     if (uniforms.uAlbedoColor instanceof Texture2D) {
-        console.log('Albedo texture')
         flags.push('#define USE_ALBEDO_MAP');
     }
     if (uniforms.uRoughness instanceof Texture2D) {

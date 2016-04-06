@@ -5,9 +5,9 @@ precision highp float;
 #ifdef GL_ES
   #extension GL_EXT_shader_texture_lod : require
   #extension GL_OES_standard_derivatives : require
+  #define textureCubeLod textureCubeLodEXT
 #else
   #extension GL_ARB_shader_texture_lod : require
-  #define textureCubeLod textureCubeLodExt
 #endif
 
 #pragma glslify: envMapEquirect     = require(../local_modules/glsl-envmap-equirect)
@@ -124,8 +124,9 @@ vec3 getPrefilteredReflection(vec3 eyeDirWorld, vec3 normalWorld, float roughnes
     float lod = roughness * maxMipMapLevel;
     float upLod = floor(lod);
     float downLod = ceil(lod);
-    vec3 a = textureCube(uReflectionMap, R, upLod).rgb;
-    vec3 b = textureCube(uReflectionMap, R, downLod).rgb;
+    vec3 a = textureCubeLod(uReflectionMap, R, upLod).rgb;
+    vec3 b = textureCubeLod(uReflectionMap, R, downLod).rgb;
+
     return mix(a, b, lod - upLod);
 }
 

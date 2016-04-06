@@ -25,6 +25,7 @@ var centerAndResize     = require('../local_modules/geom-center-and-resize/');
 var Vec3                = require('pex-math/Vec3');
 var serializeObj        = require('../local_modules/geom-serialize-obj/');
 var fs = require('fs');
+var isMobile            = require('is-mobile')();
 
 function grid(x, y, w, h, nw, nh, margin){
     margin = margin || 0;
@@ -45,13 +46,13 @@ function grid(x, y, w, h, nw, nh, margin){
     return cells;
 }
 
-var W = 1280;
-var H = 720;
+var W = isBrowser ? window.innerWidth : 1280;
+var H = isBrowser ? window.innerHeight : 720;
 
 var ROOT_DIR = isBrowser ? '.' :  __dirname + '';
 var ASSETS_DIR = isBrowser ? '../assets' :  __dirname + '/../assets';
 
-var viewports = grid(180, 0, W-180, H, 6, 4);
+var viewports = isMobile ? grid(0, 0, W, H, 1, 2) : grid(180, 0, W-180, H, 8, 4);
 var materials = [];
 
 
@@ -67,7 +68,8 @@ var State = {
 function loadTexture(ctx, url) {
     var tex = ctx.createTexture2D(null, 512, 512);
     io.loadImage(url, function(err, img) {
-        tex.update(img, img.width, img.height, { flipY: true });
+        console.log(url, img.width, img.height)
+        tex.update(img, img.width, img.height, { flipY: true, repeat: false });
     })
     return tex;
 }
@@ -75,7 +77,8 @@ function loadTexture(ctx, url) {
 Window.create({
     settings: {
         width: W,
-        height: H
+        height: H,
+        fullScreen: isBrowser
     },
     resources: {
         skyboxVert: { glsl: glslify(__dirname + '/SkyboxQuad.vert') },
@@ -116,7 +119,7 @@ Window.create({
     },
     initCamera: function() {
         this.camera = new PerspCamera(45, viewports[0][2] / viewports[0][3], 0.1, 100);
-        this.camera.lookAt([2, 0.5, -4], [0, -0.5, 0], [0, 1, 0]);
+        this.camera.lookAt([2, 0, -4], [0, 0, 0], [0, 1, 0]);
         this.arcball = new Arcball(this.camera, this.getWidth(), this.getHeight());
         this.addEventListener(this.arcball);
     },
@@ -125,7 +128,8 @@ Window.create({
         var res = this.getResources();
 
         var capsule = createCapsule(0.6, 1, 24, 24);
-        // capsule = createSphere();
+        //capsule = createSphere();
+        //capsule = createCube();
         //   capsule = parseObj(res.head)
         //   capsule.positions = centerAndResize(capsule.positions, 3);
         //   capsule.normals = computeNormals(capsule.positions, capsule.cells)
@@ -166,17 +170,23 @@ Window.create({
             type: ctx.FLOAT
         });
 
+        this.checkErrors('textures loaded');
+
         var CUBEMAP_SIZE = 256;
 
         //TODO: seamless cubemap sampling would help...
-        this.reflectionCubemap = ctx.createTextureCube(null, CUBEMAP_SIZE, CUBEMAP_SIZE, { type: ctx.FLOAT, minFilter: ctx.LINEAR_MIPMAP_LINEAR, magFilter: ctx.LINEAR });
-        this.reflectionPREM = ctx.createTextureCube(null, CUBEMAP_SIZE, CUBEMAP_SIZE, { type: ctx.FLOAT, minFilter: ctx.LINEAR_MIPMAP_LINEAR, magFilter: ctx.LINEAR });
-        this.reflectionMap128 = ctx.createTextureCube(null, CUBEMAP_SIZE/2, CUBEMAP_SIZE/2, { type: ctx.FLOAT, minFilter: ctx.NEAREST, magFilter: ctx.NEAREST });
-        this.reflectionMap64 = ctx.createTextureCube(null, CUBEMAP_SIZE/4, CUBEMAP_SIZE/4, { type: ctx.FLOAT, minFilter: ctx.NEAREST, magFilter: ctx.NEAREST });
-        this.reflectionMap32 = ctx.createTextureCube(null, CUBEMAP_SIZE/8, CUBEMAP_SIZE/8, { type: ctx.FLOAT, minFilter: ctx.NEAREST, magFilter: ctx.NEAREST });
-        this.irradianceCubemapConv = ctx.createTextureCube(null, CUBEMAP_SIZE/8, CUBEMAP_SIZE/8, { type: ctx.FLOAT });
+        this.reflectionCubemap = ctx.createTextureCube(null, CUBEMAP_SIZE, CUBEMAP_SIZE, { type: ctx.HALF_FLOAT, minFilter: ctx.LINEAR_MIPMAP_LINEAR, magFilter: ctx.LINEAR });
+        this.reflectionPREM = ctx.createTextureCube(null, CUBEMAP_SIZE, CUBEMAP_SIZE, { type: ctx.HALF_FLOAT, minFilter: ctx.LINEAR_MIPMAP_LINEAR, magFilter: ctx.LINEAR });
+        this.reflectionMap128 = ctx.createTextureCube(null, CUBEMAP_SIZE/2, CUBEMAP_SIZE/2, { type: ctx.HALF_FLOAT, minFilter: ctx.NEAREST, magFilter: ctx.NEAREST });
+        this.reflectionMap64 = ctx.createTextureCube(null, CUBEMAP_SIZE/4, CUBEMAP_SIZE/4, { type: ctx.HALF_FLOAT, minFilter: ctx.NEAREST, magFilter: ctx.NEAREST });
+        this.reflectionMap32 = ctx.createTextureCube(null, CUBEMAP_SIZE/8, CUBEMAP_SIZE/8, { type: ctx.HALF_FLOAT, minFilter: ctx.NEAREST, magFilter: ctx.NEAREST });
+        this.irradianceCubemapConv = ctx.createTextureCube(null, CUBEMAP_SIZE/8, CUBEMAP_SIZE/8, { type: ctx.HALF_FLOAT });
+
+        this.checkErrors('textures created');
 
         envmapToCubemap(ctx, this.reflectionMap, this.reflectionCubemap); //render envmap to cubemap
+
+        this.checkErrors('textures rendered to');
 
         ctx.bindTexture(this.reflectionCubemap);
         var gl = ctx.getGL();
@@ -186,166 +196,183 @@ Window.create({
         ctx.bindTexture(this.reflectionPREM);
         var gl = ctx.getGL();
         gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
-        gl.texParameterf(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAG_FILTER, gl.LINEAR );
-        gl.texParameterf(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR );
+        //gl.texParameterf(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAG_FILTER, gl.LINEAR );
+        //gl.texParameterf(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR );
 
+        this.checkErrors('textures mipmapped');
 
         downsampleCubemap(ctx, this.reflectionCubemap, this.reflectionMap128);
         downsampleCubemap(ctx, this.reflectionMap128, this.reflectionMap64);
         downsampleCubemap(ctx, this.reflectionMap64,  this.reflectionMap32);
-        convolveCubemap(ctx,   this.reflectionMap32,  this.irradianceCubemapConv);
+        convolveCubemap(ctx,   this.reflectionMap32,  this.irradianceCubemapConv, !isMobile);
+
+        this.checkErrors('downsampled cubemap');
+
         prefilterCubemap(ctx,   this.reflectionCubemap,  this.reflectionPREM);
+        this.checkErrors('previltered cubemap');
 
         this.showColorsProgram = ctx.createProgram(res.showColorsVert, res.showColorsFrag)
         this.skyboxProgram = ctx.createProgram(res.skyboxVert, res.skyboxFrag)
 
         this.debugDraw = new Draw(ctx);
 
-        //dielectric
-        for(var i=0; i<6; i++) {
+        if (!isMobile) {
+            //dielectric
+            for(var i=0; i<8; i++) {
+                materials.push(new PBRMaterial(ctx, {
+                    uExposure: State.exposure,
+                    uRoughness: i/8,
+                    uIrradianceMap: this.irradianceCubemapConv,
+                    uReflectionMap: this.reflectionPREM,
+                    uAlbedoColor: [0.8, 0.2, 0.2, 1.0],
+                    uLightColor: [1, 1, 1, 1.0]
+                }))
+            }
+
+            //metallic
+            for(var i=0; i<8; i++) {
+                materials.push(new PBRMaterial(ctx, {
+                    uExposure: State.exposure,
+                    uRoughness: i/8,
+                    uMetalness: 1,
+                    uIrradianceMap: this.irradianceCubemapConv,
+                    uReflectionMap: this.reflectionPREM,
+                    uAlbedoColor: [1, 1, 1, 1.0],
+                    uLightColor: [1, 1, 1, 1.0]
+                }))
+            }
+
             materials.push(new PBRMaterial(ctx, {
+                uAlbedoColor: loadTexture(ctx, ASSETS_DIR + '/textures/Metal_ScifiTrimPieces_Base_Color.png'),
+                uRoughness: loadTexture(ctx, ASSETS_DIR + '/textures/Metal_ScifiTrimPieces_Roughness.png'),
+                uMetalness: loadTexture(ctx, ASSETS_DIR + '/textures/Metal_ScifiTrimPieces_Metallic.png'),
+                uNormalMap: loadTexture(ctx, ASSETS_DIR + '/textures/Metal_ScifiTrimPieces_Normal.png'),
                 uExposure: State.exposure,
-                uRoughness: i/5,
                 uIrradianceMap: this.irradianceCubemapConv,
                 uReflectionMap: this.reflectionPREM,
-                uAlbedoColor: [0.8, 0.2, 0.2, 1.0],
-                uLightColor: [1, 1, 1, 1.0]
             }))
-        }
 
-        //metallic
-        for(var i=0; i<6; i++) {
             materials.push(new PBRMaterial(ctx, {
+                uAlbedoColor: loadTexture(ctx, ASSETS_DIR + '/textures/Metal_SciFiDetailKit_Base_Color.png'),
+                uRoughness: loadTexture(ctx, ASSETS_DIR + '/textures/Metal_SciFiDetailKit_Roughness.png'),
+                uMetalness: loadTexture(ctx, ASSETS_DIR + '/textures/Metal_SciFiDetailKit_Metallic.png'),
+                uNormalMap: loadTexture(ctx, ASSETS_DIR + '/textures/Metal_SciFiDetailKit_Normal.png'),
                 uExposure: State.exposure,
-                uRoughness: i/5,
-                uMetalness: 1,
                 uIrradianceMap: this.irradianceCubemapConv,
                 uReflectionMap: this.reflectionPREM,
-                uAlbedoColor: [1.0, 0.86, 0.57, 1.0],
-                uLightColor: [1, 1, 1, 1.0]
+            }))
+
+            materials.push(new PBRMaterial(ctx, {
+                uAlbedoColor: loadTexture(ctx, ASSETS_DIR + '/textures/Misc_PaintedBarrel_Base_Color.png'),
+                uRoughness: loadTexture(ctx, ASSETS_DIR + '/textures/Misc_PaintedBarrel_Roughness.png'),
+                uMetalness: loadTexture(ctx, ASSETS_DIR + '/textures/Misc_PaintedBarrel_Metallic.png'),
+                uNormalMap: loadTexture(ctx, ASSETS_DIR + '/textures/Misc_PaintedBarrel_Normal.png'),
+                uExposure: State.exposure,
+                uIrradianceMap: this.irradianceCubemapConv,
+                uReflectionMap: this.reflectionPREM,
+            }))
+
+
+            materials.push(new PBRMaterial(ctx, {
+                uAlbedoColor: loadTexture(ctx, ASSETS_DIR + '/textures/Wood_AlternatingSquareTiles_Base_Color_2.png'),
+                uRoughness: loadTexture(ctx, ASSETS_DIR + '/textures/Wood_AlternatingSquareTiles_Roughness.png'),
+                uMetalness: loadTexture(ctx, ASSETS_DIR + '/textures/Wood_AlternatingSquareTiles_Metallic.png'),
+                uNormalMap: loadTexture(ctx, ASSETS_DIR + '/textures/Wood_AlternatingSquareTiles_Normal.png'),
+                uExposure: State.exposure,
+                uIrradianceMap: this.irradianceCubemapConv,
+                uReflectionMap: this.reflectionPREM,
+            }))
+
+            materials.push(new PBRMaterial(ctx, {
+                uAlbedoColor: loadTexture(ctx, ASSETS_DIR + '/textures/Metal_Gold_Base_Color.png'),
+                uRoughness: loadTexture(ctx, ASSETS_DIR + '/textures/Metal_Gold_Roughness.png'),
+                uMetalness: loadTexture(ctx, ASSETS_DIR + '/textures/Metal_Gold_Metallic.png'),
+                uNormalMap: loadTexture(ctx, ASSETS_DIR + '/textures/Metal_Gold_Normal.png'),
+                uExposure: State.exposure,
+                uIrradianceMap: this.irradianceCubemapConv,
+                uReflectionMap: this.reflectionPREM,
+            }))
+
+            materials.push(new PBRMaterial(ctx, {
+                uAlbedoColor: loadTexture(ctx, ASSETS_DIR + '/textures/Metal_ChromeScratched_Base_Color.png'),
+                uRoughness: loadTexture(ctx, ASSETS_DIR + '/textures/Metal_ChromeScratched_Roughness.png'),
+                uMetalness: loadTexture(ctx, ASSETS_DIR + '/textures/Metal_ChromeScratched_Metallic.png'),
+                uNormalMap: loadTexture(ctx, ASSETS_DIR + '/textures/Metal_ChromeScratched_Normal.png'),
+                uExposure: State.exposure,
+                uIrradianceMap: this.irradianceCubemapConv,
+                uReflectionMap: this.reflectionPREM,
+            }))
+
+            materials.push(new PBRMaterial(ctx, {
+                uAlbedoColor: loadTexture(ctx, ASSETS_DIR + '/textures/Metal_AluminiumDirectional_Base_Color.png'),
+                uRoughness: loadTexture(ctx, ASSETS_DIR + '/textures/Metal_AluminiumDirectional_Roughness.png'),
+                uMetalness: loadTexture(ctx, ASSETS_DIR + '/textures/Metal_AluminiumDirectional_Metallic.png'),
+                uNormalMap: loadTexture(ctx, ASSETS_DIR + '/textures/Metal_AluminiumDirectional_Normal.png'),
+                uExposure: State.exposure,
+                uIrradianceMap: this.irradianceCubemapConv,
+                uReflectionMap: this.reflectionPREM,
+            }))
+
+            materials.push(new PBRMaterial(ctx, {
+                uAlbedoColor: loadTexture(ctx, ASSETS_DIR + '/textures/Tile_Disgusting_Base_Color.png'),
+                uRoughness: loadTexture(ctx, ASSETS_DIR + '/textures/Tile_Disgusting_Roughness.png'),
+                uMetalness: loadTexture(ctx, ASSETS_DIR + '/textures/Tile_Disgusting_Metallic.png'),
+                uNormalMap: loadTexture(ctx, ASSETS_DIR + '/textures/Tile_Disgusting_Normal.png'),
+                uExposure: State.exposure,
+                uIrradianceMap: this.irradianceCubemapConv,
+                uReflectionMap: this.reflectionPREM,
+            }))
+
+            materials.push(new PBRMaterial(ctx, {
+                uAlbedoColor: loadTexture(ctx, ASSETS_DIR + '/textures/Tile_CurveSandTiles_Base_Color.png'),
+                uRoughness: loadTexture(ctx, ASSETS_DIR + '/textures/Tile_CurveSandTiles_Roughness.png'),
+                uMetalness: loadTexture(ctx, ASSETS_DIR + '/textures/Tile_CurveSandTiles_Metallic.png'),
+                uNormalMap: loadTexture(ctx, ASSETS_DIR + '/textures/Tile_CurveSandTiles_Normal.png'),
+                uExposure: State.exposure,
+                uIrradianceMap: this.irradianceCubemapConv,
+                uReflectionMap: this.reflectionPREM,
+            }))
+
+            materials.push(new PBRMaterial(ctx, {
+                uAlbedoColor: loadTexture(ctx, ASSETS_DIR + '/textures/Concrete_EpoxyPaintedFloor_Base_Color.png'),
+                uRoughness: loadTexture(ctx, ASSETS_DIR + '/textures/Concrete_EpoxyPaintedFloor_Roughness.png'),
+                uMetalness: loadTexture(ctx, ASSETS_DIR + '/textures/Concrete_EpoxyPaintedFloor_Metallic.png'),
+                uNormalMap: loadTexture(ctx, ASSETS_DIR + '/textures/Concrete_EpoxyPaintedFloor_Normal.png'),
+                uExposure: State.exposure,
+                uIrradianceMap: this.irradianceCubemapConv,
+                uReflectionMap: this.reflectionPREM,
+            }))
+
+            materials.push(new PBRMaterial(ctx, {
+                uAlbedoColor: loadTexture(ctx, ASSETS_DIR + '/textures/PBR Texture Vol.1/Tile_White/T_Tile_White_D.png'),
+                uRoughness: loadTexture(ctx, ASSETS_DIR + '/textures/PBR Texture Vol.1/Tile_White/T_Tile_White_R.png'),
+                uMetalness: 0,
+                uNormalMap: loadTexture(ctx, ASSETS_DIR + '/textures/PBR Texture Vol.1/Tile_White/T_Tile_White_N.png'),
+                uExposure: State.exposure,
+                uIrradianceMap: this.irradianceCubemapConv,
+                uReflectionMap: this.reflectionPREM,
+            }))
+
+            materials.push(new PBRMaterial(ctx, {
+                uAlbedoColor: loadTexture(ctx, ASSETS_DIR + '/textures/COBBLESTONE-02-Demo/COBBLESTONE-02_Demo_Color_4k.jpg'),
+                uRoughness: loadTexture(ctx, ASSETS_DIR + '/textures/COBBLESTONE-02-Demo/COBBLESTONE-02_Demo_Roughness_4k.jpg'),
+                uMetalness: 0,
+                uNormalMap: loadTexture(ctx, ASSETS_DIR + '/textures/COBBLESTONE-02-Demo/COBBLESTONE-02_Demo_Normal_4k.jpg'),
+                uExposure: State.exposure,
+                uIrradianceMap: this.irradianceCubemapConv,
+                uReflectionMap: this.reflectionPREM,
+            }))
+
+            materials.push(new PBRMaterial(ctx, {
+                uAlbedoColor: loadTexture(ctx, ASSETS_DIR + '/textures/iSourceTextures - Metal07_ALBEDO.png'),
+                uRoughness: loadTexture(ctx, ASSETS_DIR + '/textures/iSourceTextures - Metal07_SPEC.png'),
+                uMetalness: loadTexture(ctx, ASSETS_DIR + '/textures/iSourceTextures - Metal07_METTALIC.png'),
+                uNormalMap: loadTexture(ctx, ASSETS_DIR + '/textures/iSourceTextures - Metal07_NORM.png'),
+                uExposure: State.exposure,
+                uIrradianceMap: this.irradianceCubemapConv,
+                uReflectionMap: this.reflectionPREM,
             }))
         }
-
-        materials.push(new PBRMaterial(ctx, {
-            uAlbedoColor: loadTexture(ctx, ASSETS_DIR + '/textures/Metal_ScifiTrimPieces_Base_Color.png'),
-            uRoughness: loadTexture(ctx, ASSETS_DIR + '/textures/Metal_ScifiTrimPieces_Roughness.png'),
-            uMetalness: loadTexture(ctx, ASSETS_DIR + '/textures/Metal_ScifiTrimPieces_Metallic.png'),
-            uNormalMap: loadTexture(ctx, ASSETS_DIR + '/textures/Metal_ScifiTrimPieces_Normal.png'),
-            uExposure: State.exposure,
-            uIrradianceMap: this.irradianceCubemapConv,
-            uReflectionMap: this.reflectionPREM,
-        }))
-
-        materials.push(new PBRMaterial(ctx, {
-            uAlbedoColor: loadTexture(ctx, ASSETS_DIR + '/textures/Metal_SciFiDetailKit_Base_Color.png'),
-            uRoughness: loadTexture(ctx, ASSETS_DIR + '/textures/Metal_SciFiDetailKit_Roughness.png'),
-            uMetalness: loadTexture(ctx, ASSETS_DIR + '/textures/Metal_SciFiDetailKit_Metallic.png'),
-            uNormalMap: loadTexture(ctx, ASSETS_DIR + '/textures/Metal_SciFiDetailKit_Normal.png'),
-            uExposure: State.exposure,
-            uIrradianceMap: this.irradianceCubemapConv,
-            uReflectionMap: this.reflectionPREM,
-        }))
-
-        materials.push(new PBRMaterial(ctx, {
-            uAlbedoColor: loadTexture(ctx, ASSETS_DIR + '/textures/Misc_PaintedBarrel_Base_Color.png'),
-            uRoughness: loadTexture(ctx, ASSETS_DIR + '/textures/Misc_PaintedBarrel_Roughness.png'),
-            uMetalness: loadTexture(ctx, ASSETS_DIR + '/textures/Misc_PaintedBarrel_Metallic.png'),
-            uNormalMap: loadTexture(ctx, ASSETS_DIR + '/textures/Misc_PaintedBarrel_Normal.png'),
-            uExposure: State.exposure,
-            uIrradianceMap: this.irradianceCubemapConv,
-            uReflectionMap: this.reflectionPREM,
-        }))
-
-
-        materials.push(new PBRMaterial(ctx, {
-            uAlbedoColor: loadTexture(ctx, ASSETS_DIR + '/textures/Wood_AlternatingSquareTiles_Base_Color_2.png'),
-            uRoughness: loadTexture(ctx, ASSETS_DIR + '/textures/Wood_AlternatingSquareTiles_Roughness.png'),
-            uMetalness: loadTexture(ctx, ASSETS_DIR + '/textures/Wood_AlternatingSquareTiles_Metallic.png'),
-            uNormalMap: loadTexture(ctx, ASSETS_DIR + '/textures/Wood_AlternatingSquareTiles_Normal.png'),
-            uExposure: State.exposure,
-            uIrradianceMap: this.irradianceCubemapConv,
-            uReflectionMap: this.reflectionPREM,
-        }))
-
-        materials.push(new PBRMaterial(ctx, {
-            uAlbedoColor: loadTexture(ctx, ASSETS_DIR + '/textures/Metal_Gold_Base_Color.png'),
-            uRoughness: loadTexture(ctx, ASSETS_DIR + '/textures/Metal_Gold_Roughness.png'),
-            uMetalness: loadTexture(ctx, ASSETS_DIR + '/textures/Metal_Gold_Metallic.png'),
-            uNormalMap: loadTexture(ctx, ASSETS_DIR + '/textures/Metal_Gold_Normal.png'),
-            uExposure: State.exposure,
-            uIrradianceMap: this.irradianceCubemapConv,
-            uReflectionMap: this.reflectionPREM,
-        }))
-
-        materials.push(new PBRMaterial(ctx, {
-            uAlbedoColor: loadTexture(ctx, ASSETS_DIR + '/textures/Metal_ChromeScratched_Base_Color.png'),
-            uRoughness: loadTexture(ctx, ASSETS_DIR + '/textures/Metal_ChromeScratched_Roughness.png'),
-            uMetalness: loadTexture(ctx, ASSETS_DIR + '/textures/Metal_ChromeScratched_Metallic.png'),
-            uNormalMap: loadTexture(ctx, ASSETS_DIR + '/textures/Metal_ChromeScratched_Normal.png'),
-            uExposure: State.exposure,
-            uIrradianceMap: this.irradianceCubemapConv,
-            uReflectionMap: this.reflectionPREM,
-        }))
-
-        materials.push(new PBRMaterial(ctx, {
-            uAlbedoColor: loadTexture(ctx, ASSETS_DIR + '/textures/Metal_AluminiumDirectional_Base_Color.png'),
-            uRoughness: loadTexture(ctx, ASSETS_DIR + '/textures/Metal_AluminiumDirectional_Roughness.png'),
-            uMetalness: loadTexture(ctx, ASSETS_DIR + '/textures/Metal_AluminiumDirectional_Metallic.png'),
-            uNormalMap: loadTexture(ctx, ASSETS_DIR + '/textures/Metal_AluminiumDirectional_Normal.png'),
-            uExposure: State.exposure,
-            uIrradianceMap: this.irradianceCubemapConv,
-            uReflectionMap: this.reflectionPREM,
-        }))
-
-        materials.push(new PBRMaterial(ctx, {
-            uAlbedoColor: loadTexture(ctx, ASSETS_DIR + '/textures/Tile_Disgusting_Base_Color.png'),
-            uRoughness: loadTexture(ctx, ASSETS_DIR + '/textures/Tile_Disgusting_Roughness.png'),
-            uMetalness: loadTexture(ctx, ASSETS_DIR + '/textures/Tile_Disgusting_Metallic.png'),
-            uNormalMap: loadTexture(ctx, ASSETS_DIR + '/textures/Tile_Disgusting_Normal.png'),
-            uExposure: State.exposure,
-            uIrradianceMap: this.irradianceCubemapConv,
-            uReflectionMap: this.reflectionPREM,
-        }))
-
-        materials.push(new PBRMaterial(ctx, {
-            uAlbedoColor: loadTexture(ctx, ASSETS_DIR + '/textures/Tile_CurveSandTiles_Base_Color.png'),
-            uRoughness: loadTexture(ctx, ASSETS_DIR + '/textures/Tile_CurveSandTiles_Roughness.png'),
-            uMetalness: loadTexture(ctx, ASSETS_DIR + '/textures/Tile_CurveSandTiles_Metallic.png'),
-            uNormalMap: loadTexture(ctx, ASSETS_DIR + '/textures/Tile_CurveSandTiles_Normal.png'),
-            uExposure: State.exposure,
-            uIrradianceMap: this.irradianceCubemapConv,
-            uReflectionMap: this.reflectionPREM,
-        }))
-
-        materials.push(new PBRMaterial(ctx, {
-            uAlbedoColor: loadTexture(ctx, ASSETS_DIR + '/textures/Concrete_EpoxyPaintedFloor_Base_Color.png'),
-            uRoughness: loadTexture(ctx, ASSETS_DIR + '/textures/Concrete_EpoxyPaintedFloor_Roughness.png'),
-            uMetalness: loadTexture(ctx, ASSETS_DIR + '/textures/Concrete_EpoxyPaintedFloor_Metallic.png'),
-            uNormalMap: loadTexture(ctx, ASSETS_DIR + '/textures/Concrete_EpoxyPaintedFloor_Normal.png'),
-            uExposure: State.exposure,
-            uIrradianceMap: this.irradianceCubemapConv,
-            uReflectionMap: this.reflectionPREM,
-        }))
-
-        materials.push(new PBRMaterial(ctx, {
-            uAlbedoColor: loadTexture(ctx, ASSETS_DIR + '/textures/Plastic_Base_Color.png'),
-            uRoughness: loadTexture(ctx, ASSETS_DIR + '/textures/Plastic_Roughness.png'),
-            uMetalness: loadTexture(ctx, ASSETS_DIR + '/textures/Plastic_Metalness.png'),
-            uNormalMap: loadTexture(ctx, ASSETS_DIR + '/textures/Plastic_Normal.png'),
-            uExposure: State.exposure,
-            uIrradianceMap: this.irradianceCubemapConv,
-            uReflectionMap: this.reflectionPREM,
-        }))
-
-        materials.push(new PBRMaterial(ctx, {
-            uAlbedoColor: loadTexture(ctx, ASSETS_DIR + '/textures/Plastic_Base_Color_2.png'),
-            uRoughness: loadTexture(ctx, ASSETS_DIR + '/textures/Plastic_Roughness_2.png'),
-            uMetalness: loadTexture(ctx, ASSETS_DIR + '/textures/Plastic_Metalness_2.png'),
-            uNormalMap: loadTexture(ctx, ASSETS_DIR + '/textures/Plastic_Normal_2.png'),
-            uExposure: State.exposure,
-            uIrradianceMap: this.irradianceCubemapConv,
-            uReflectionMap: this.reflectionPREM,
-        }))
 
         materials.push(new PBRMaterial(ctx, {
             uAlbedoColor: loadTexture(ctx, ASSETS_DIR + '/textures/Plastic_Base_Color.png'),
@@ -373,9 +400,21 @@ Window.create({
         var gui = this.gui = new GUI(ctx, W, H);
         this.addEventListener(gui)
 
-        this.gui.addTexture2D('Reflection Map', this.reflectionMap)
-        this.gui.addTextureCube('Reflection PREM', this.reflectionPREM)
-        this.gui.addTextureCube('Irradiance Conv', this.irradianceCubemapConv)
+        //this.gui.addTexture2D('Reflection Map', this.reflectionMap)
+        //this.gui.addTexture2D('Reflection PREM', this.reflectionPREM)
+        this.gui.addTextureCube('Reflection PREM 0', this.reflectionPREM, { level: 0, hdr: true })
+        this.gui.addTextureCube('Reflection PREM 1', this.reflectionPREM, { level: 1, hdr: true })
+        this.gui.addTextureCube('Reflection PREM 2', this.reflectionPREM, { level: 2, hdr: true })
+        this.gui.addTextureCube('Reflection PREM 3', this.reflectionPREM, { level: 3, hdr: true })
+        this.gui.addTextureCube('Reflection PREM 4', this.reflectionPREM, { level: 4, hdr: true })
+        this.gui.addTextureCube('Reflection PREM 5', this.reflectionPREM, { level: 5, hdr: true })
+        this.gui.addTextureCube('Irradiance Conv', this.irradianceCubemapConv, { level: 0, hdr: true})
+
+        this.gui.addParam('exposure', State, 'exposure', { min: 0, max:5 }, function(value) {
+            materials.forEach(function(material, i) {
+                material.uniforms.uExposure = value;
+            })
+        })
 
         this.gui.addParam('lightColor', State, 'lightColor', { min: 0, max:10 }, function(value) {
             materials.forEach(function(material, i) {
@@ -388,9 +427,27 @@ Window.create({
             this.gui.toggleEnabled();
         }
     },
+    checkErrors: function(message) {
+        var gl = this.getContext().getGL()
+        this.prevError = this.error;
+        this.error = gl.getError();
+        if (this.error != this.prevError) {
+            var errorStr = 'Unknown';
+            for(var i in gl) {
+                if (gl[i] == this.error) {
+                    errorStr = i;
+                }
+            }
+            console.log('Error', this.error, errorStr);
+            if (this.error != 0) {
+                throw new Error(this.error + ' : ' + errorStr + ' before ' + message);
+            }
+        }
+    },
     draw: function() {
         var ctx = this.getContext();
         var dbg = this.debugDraw;
+
 
         this.arcball.apply();
         ctx.setProjectionMatrix(this.camera.getProjectionMatrix());
@@ -465,6 +522,11 @@ Window.create({
             ctx.popState(ctx.VIEWPORT_BIT | ctx.SCISSOR_BIT);
         }
 
-        this.gui.draw();
+        if (!isMobile) {
+            this.gui.draw();
+        }
+
+        this.checkErrors()
+
     }
 })
