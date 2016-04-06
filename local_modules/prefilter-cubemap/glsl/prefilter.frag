@@ -1,12 +1,12 @@
 //Based on Article - Physically Based Rendering by Marco Alamia
 //http://www.codinglabs.net/article_physically_based_rendering.aspx
 
-#pragma glslify: random    = require(glsl-random)
-#pragma glslify: envMapCube      = require(../../glsl-envmap-cube)
-
 #ifdef GL_ES
 precision highp float;
 #endif
+
+#pragma glslify: random    = require(glsl-random)
+#pragma glslify: envMapCube      = require(../../glsl-envmap-cube)
 
 varying vec3 wcNormal;
 varying vec2 scPosition;
@@ -14,6 +14,7 @@ varying vec2 scPosition;
 uniform samplerCube uEnvMap;
 uniform sampler2D uHammersleyPointSetMap;
 uniform float uRoughness;
+uniform int uNumSamples;
 
 const float PI = 3.1415926536;
 
@@ -65,14 +66,14 @@ vec3 PrefilterEnvMap( float Roughness, vec3 R ) {
     vec3 N = R;
     vec3 V = R;
     vec3 PrefilteredColor = vec3(0.0);
-    const int NumSamples = 1024;
+    const int NumSamples = 1024;//1024
     float TotalWeight = 0.0;
     for( int i = 0; i < NumSamples; i++ ) {
         vec2 Xi = Hammersley( i, NumSamples );
         vec3 H = ImportanceSampleGGX( Xi, Roughness, N );
-        vec3 L = 2 * dot( V, H ) * H - V;
+        vec3 L = 2.0 * dot( V, H ) * H - V;
         float NoL = saturate( dot( N, L ) );
-        if( NoL > 0 ) {
+        if( NoL > 0.0 ) {
             PrefilteredColor += textureCube( uEnvMap, L).rgb * NoL;
             TotalWeight += NoL;
         }
