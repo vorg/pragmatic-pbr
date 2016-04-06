@@ -10,7 +10,7 @@ varying vec2 scPosition;
 
 uniform samplerCube uEnvMap;
 uniform float uFace;
-uniform float uQuality;
+uniform bool uHighQuality;
 
 const float PI = 3.1415926536;
 
@@ -22,16 +22,29 @@ void main() {
 
     vec3 sampledColour = vec3(0,0,0);
     float index = 0.0;
-    float numPhiSamples = 180.0 * uQuality;
-    float numThetaSamples = 64.0 * uQuality;
-    float dphi = 2.0 * PI / numPhiSamples;
-    float dtheta = 0.5 * PI / numThetaSamples;
-    for(float phi = 0.0; phi < 6.283; phi += dphi) {
-        for(float theta = 0.0; theta < 1.57; theta += dtheta) {
-            vec3 temp = cos(phi) * right + sin(phi) * up;
-            vec3 sampleVector = cos(theta) * normal + sin(theta) * temp;
-            sampledColour += textureCube( uEnvMap, sampleVector ).rgb * cos(theta) * sin(theta);
-            index++;
+
+    if (uHighQuality) {
+        const float dphi = 2.0 * PI / 180.0;
+        const float dtheta = 0.5 * PI / 64.0;
+        for(float phi = 0.0; phi < 6.283; phi += dphi) {
+            for(float theta = 0.0; theta < 1.57; theta += dtheta) {
+                vec3 temp = cos(phi) * right + sin(phi) * up;
+                vec3 sampleVector = cos(theta) * normal + sin(theta) * temp;
+                sampledColour += textureCube( uEnvMap, sampleVector ).rgb * cos(theta) * sin(theta);
+                index++;
+            }
+        }
+    }
+    else {
+        const float dphi = 2.0 * PI / 90.0;
+        const float dtheta = 0.5 * PI / 32.0;
+        for(float phi = 0.0; phi < 6.283; phi += dphi) {
+            for(float theta = 0.0; theta < 1.57; theta += dtheta) {
+                vec3 temp = cos(phi) * right + sin(phi) * up;
+                vec3 sampleVector = cos(theta) * normal + sin(theta) * temp;
+                sampledColour += textureCube( uEnvMap, sampleVector ).rgb * cos(theta) * sin(theta);
+                index++;
+            }
         }
     }
 

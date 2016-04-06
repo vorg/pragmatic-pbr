@@ -10,8 +10,8 @@ var quadFaces = [ [0, 1, 2], [0, 2, 3]];
 var quadMesh = null;
 var convolveProgram = null;
 
-function convolveCubemap(ctx, fromCubemap, toCubemap, quality) {
-    quality = quality || 1.0;
+function convolveCubemap(ctx, fromCubemap, toCubemap, highQuality) {
+    highQuality = (highQuality !== undefined) ? highQuality : true;
 
     ctx.pushState(ctx.MESH_BIT | ctx.PROGRAM_BIT); //ctx.TEXTURE_BIT
     if (!quadMesh) {
@@ -25,7 +25,7 @@ function convolveCubemap(ctx, fromCubemap, toCubemap, quality) {
         ctx.bindTexture(fromCubemap, 0);
         ctx.bindProgram(convolveProgram);
         convolveProgram.setUniform('uEnvMap', 0);
-        convolveProgram.setUniform('uQuality', quality);
+        convolveProgram.setUniform('uHighQuality', highQuality);
         ctx.bindMesh(quadMesh);
         ctx.drawMesh();
     });
