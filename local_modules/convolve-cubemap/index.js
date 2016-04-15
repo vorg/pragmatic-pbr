@@ -10,8 +10,9 @@ var quadFaces = [ [0, 1, 2], [0, 2, 3]];
 var quadMesh = null;
 var convolveProgram = null;
 
-function convolveCubemap(ctx, fromCubemap, toCubemap, highQuality) {
-    highQuality = (highQuality !== undefined) ? highQuality : true;
+function convolveCubemap(ctx, fromCubemap, toCubemap, options) {
+    options = options || {};
+    var highQuality = (options.highQuality !== undefined) ? options.highQuality : true;
 
     ctx.pushState(ctx.MESH_BIT | ctx.PROGRAM_BIT); //ctx.TEXTURE_BIT
     if (!quadMesh) {
