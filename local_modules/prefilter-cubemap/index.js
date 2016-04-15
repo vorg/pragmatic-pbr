@@ -12,8 +12,11 @@ var quadFaces = [ [0, 1, 2], [0, 2, 3]];
 var quadMesh = null;
 var prefilterProgram = null;
 
-function prefilterCubemap(ctx, fromCubemap, toCubemap) {
-    var numSamples = 1024;
+function prefilterCubemap(ctx, fromCubemap, toCubemap, options) {
+    options = options || {};
+    var highQuality = (options.highQuality !== undefined) ? options.highQuality : true;
+
+    var numSamples = highQuality ? 1024 : 128;
     var hammersleyPointSet = new Float32Array(4 * numSamples);
     for(var i=0; i<numSamples; i++) {
         var p = hammersley(i, numSamples)
@@ -51,6 +54,7 @@ function prefilterCubemap(ctx, fromCubemap, toCubemap) {
             ctx.bindProgram(prefilterProgram);
             prefilterProgram.setUniform('uEnvMap', 0);
             prefilterProgram.setUniform('uHammersleyPointSetMap', 1);
+            prefilterProgram.setUniform('uNumSamples', numSamples);
             prefilterProgram.setUniform('uRoughness', Math.min(1.0, level * 0.2));
             ctx.bindMesh(quadMesh);
             ctx.drawMesh();
