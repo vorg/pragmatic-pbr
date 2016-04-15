@@ -8,6 +8,7 @@ uniform mat4 uModelMatrix;
 uniform mat3 uNormalMatrix;
 uniform mat4 uInverseViewMatrix;
 uniform float uTexCoord0Scale;
+uniform vec2 uTexCoord0Offset;
 
 varying vec3 vNormalWorld;
 varying vec3 vNormalView;
@@ -27,5 +28,5 @@ void main() {
 
     gl_Position = uProjectionMatrix * vec4(positionView, 1.0);
 
-    vTexCord0 = fract(aTexCoord0 * uTexCoord0Scale);
+    vTexCord0 = fract(aTexCoord0 * uTexCoord0Scale * vec2(1.0, 0.5) + uTexCoord0Offset);
 }

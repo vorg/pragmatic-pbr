@@ -19,7 +19,8 @@ function PBRMaterial(ctx, uniforms, watch) {
         uAlbedoColor: [0,0,0,1],
         uLightColor: [1,1,1,1],
         uIor: 1.4,
-        uTexCoord0Scale: 2
+        uTexCoord0Scale: 1,
+        uTexCoord0Offset: [0, 0]
     }, uniforms || {})
 
     this.name = uniforms.name || 'PBRIBL';
